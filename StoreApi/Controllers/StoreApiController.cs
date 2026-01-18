@@ -1,0 +1,73 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using StoreApi.Models;
+using StoreApi.Dtos;
+
+[ApiController]
+[Route("api/store")]
+public class StoreApiController : ControllerBase
+{
+    private readonly StoreDbContext _db;
+
+    public StoreApiController(StoreDbContext db)
+    {
+        _db = db;
+    }
+
+    //  建立賣場（賣家）
+    [HttpPost]
+    public async Task<IActionResult> CreateStore([FromBody] CreateStoreDto dto)
+    {
+        var store = new Store
+        {
+            SellerUid = dto.SellerUid,
+            StoreName = dto.StoreName,
+            Status = 1,               // 審核中
+            ReviewFailCount = 0,
+            CreatedAt = DateTime.Now
+        };
+        // 1️⃣ 計算此賣家已建立的賣場數量
+        int storeCount = await _db.Stores
+            .CountAsync(s => s.SellerUid == dto.SellerUid);
+
+        // 2️⃣ 若已達上限（5 個）則拒絕
+        if (storeCount >= 5)
+        {
+            return BadRequest(new
+            {
+                message = "此賣家最多只能建立 5 個賣場"
+            });
+        }
+
+        _db.Stores.Add(store);
+        await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            store.StoreId,
+            store.Status
+        });
+    }
+
+    //  賣家查看自己的賣場
+    [HttpGet("my/{sellerUid}")]
+    public async Task<IActionResult> GetMyStores(string sellerUid)
+    {
+        var stores = await _db.Stores
+            .Where(s => s.SellerUid == sellerUid)
+            .ToListAsync();
+
+        return Ok(stores);
+    }
+
+    //  一般使用者查看已發布賣場
+    [HttpGet("public")]
+    public async Task<IActionResult> GetPublicStores()
+    {
+        var stores = await _db.Stores
+            .Where(s => s.Status == 3) // 已發布
+            .ToListAsync();
+
+        return Ok(stores);
+    }
+}

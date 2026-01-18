@@ -27,7 +27,9 @@ public partial class StoreProduct
 
     public DateTime? UpdatedAt { get; set; }
 
-    public virtual Store Store { get; set; } = null!;
+    public byte Status { get; set; }
 
-    public virtual ICollection<StoreOrder> StoreOrders { get; set; } = new List<StoreOrder>();
+    public int ReviewFailCount { get; set; }
+
+    public virtual Store Store { get; set; } = null!;
 }

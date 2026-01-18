@@ -7,7 +7,7 @@ public partial class StoreReview
 {
     public int ReviewId { get; set; }
 
-    public int StoreId { get; set; }
+    public int ProductId { get; set; }
 
     public string ReviewerUid { get; set; } = null!;
 
@@ -17,5 +17,5 @@ public partial class StoreReview
 
     public DateTime CreatedAt { get; set; }
 
-    public virtual Store Store { get; set; } = null!;
+    public virtual Store Product { get; set; } = null!;
 }

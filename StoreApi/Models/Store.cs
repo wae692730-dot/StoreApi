@@ -11,15 +11,9 @@ public partial class Store
 
     public string StoreName { get; set; } = null!;
 
-    public byte Status { get; set; }
-
-    public int ReviewFailCount { get; set; }
-
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
-
-    public virtual ICollection<StoreOrder> StoreOrders { get; set; } = new List<StoreOrder>();
 
     public virtual ICollection<StoreProduct> StoreProducts { get; set; } = new List<StoreProduct>();
 

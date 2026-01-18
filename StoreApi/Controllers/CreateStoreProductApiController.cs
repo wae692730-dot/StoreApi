@@ -33,8 +33,9 @@ public class CreateStoreProductApiController : ControllerBase
         if (store == null)
             return NotFound("賣場不存在");
 
-        if (store.Status == 2)
-            return BadRequest("審核失敗的賣場不可新增商品");
+        // 移除賣場審核狀態檢查
+        // if (store.Status == 2)
+        //     return BadRequest("審核失敗的賣場不可新增商品");
 
         var product = new StoreProduct
         {
@@ -46,14 +47,12 @@ public class CreateStoreProductApiController : ControllerBase
             Location = dto.Location,
             ImagePath = dto.ImagePath,
             EndDate = dto.EndDate,
-            CreatedAt = DateTime.Now
+            CreatedAt = DateTime.Now,
+            Status = 1
         };
 
         _db.StoreProducts.Add(product);
 
-        // 已發布 → 修改後退回審核
-        if (store.Status == 3)
-            store.Status = 1;
 
         await _db.SaveChangesAsync();
 
@@ -97,13 +96,10 @@ public class CreateStoreProductApiController : ControllerBase
         product.EndDate = dto.EndDate;
         product.UpdatedAt = DateTime.Now;
 
-        // ② 已發布 → 強制退回審核
-        if (store.Status == 3)
+        // ② 更新商品 → 重置為審核中
+        if (product.Status == 3 || product.Status == 2)
         {
-            store.Status = 1;
-
-            // ⭐ 關鍵：明確標記 Store 為 Modified
-            _db.Stores.Update(store);
+            product.Status = 1;
         }
 
         // ③ 一次性儲存
@@ -112,8 +108,8 @@ public class CreateStoreProductApiController : ControllerBase
         return Ok(new
         {
             product.ProductId,
-            StoreStatus = store.Status,
-            Message = "商品更新成功，賣場已退回審核"
+            ProductStatus = product.Status,
+            Message = "商品更新成功，已進入審核流程"
         });
     }
 
@@ -139,14 +135,14 @@ public class CreateStoreProductApiController : ControllerBase
         if (product == null)
             return NotFound("商品不存在");
 
-        if (store.Status == 2)
-            return BadRequest("審核失敗的賣場不可刪除商品");
+        // if (store.Status == 2)
+        //     return BadRequest("審核失敗的賣場不可刪除商品");
 
         _db.StoreProducts.Remove(product);
 
-        // 已發布 → 刪除後退回審核
-        if (store.Status == 3)
-            store.Status = 1;
+        // 已發布 → 刪除後退回審核 (移除此邏輯，刪除商品不影響賣場狀態)
+        // if (store.Status == 3)
+        //     store.Status = 1;
 
         await _db.SaveChangesAsync();
 

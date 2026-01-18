@@ -22,8 +22,6 @@ public class StoreApiController : ControllerBase
         {
             SellerUid = dto.SellerUid,
             StoreName = dto.StoreName,
-            Status = 1,               // 審核中
-            ReviewFailCount = 0,
             CreatedAt = DateTime.Now
         };
         // 1️⃣ 計算此賣家已建立的賣場數量
@@ -45,7 +43,6 @@ public class StoreApiController : ControllerBase
         return Ok(new
         {
             store.StoreId,
-            store.Status
         });
     }
 
@@ -61,13 +58,13 @@ public class StoreApiController : ControllerBase
     }
 
     //  一般使用者查看已發布賣場
-    [HttpGet("public")]
-    public async Task<IActionResult> GetPublicStores()
-    {
-        var stores = await _db.Stores
-            .Where(s => s.Status == 3) // 已發布
-            .ToListAsync();
+    //[HttpGet("public")]
+    //public async Task<IActionResult> GetPublicStores()
+    //{
+    //    var stores = await _db.Stores
+    //        .Where(s => s.Status == 3) // 已發布
+    //        .ToListAsync();
 
-        return Ok(stores);
-    }
+    //    return Ok(stores);
+    //}
 }

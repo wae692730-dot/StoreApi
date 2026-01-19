@@ -14,17 +14,36 @@ public class StoreReviewApiController : ControllerBase
     {
         _db = db;
     }
-
-    // 4️⃣ 待審核賣場
+    // 審核賣場
     [HttpGet("pending")]
     public async Task<IActionResult> GetPendingStores()
     {
         var stores = await _db.Stores
+            .Include(s => s.StoreProducts)
             .Where(s => s.Status == 1)
             .ToListAsync();
 
-        return Ok(stores);
+        var result = stores.Select(s => new StoreReviewListDto
+        {
+            StoreId = s.StoreId,
+            SellerId = s.SellerUid,
+            StoreName = s.StoreName,
+            Status = s.Status,
+            ReviewFailCount = s.ReviewFailCount,
+            CreatedAt = s.CreatedAt,
+
+            StoreProducts = s.StoreProducts.Select(p => new StoreReviewProductDto
+            {
+                ProductId = p.ProductId,
+                ProductName = p.ProductName,
+                Price = p.Price,
+                Quantity = p.Quantity
+            }).ToList()
+        }).ToList();
+
+        return Ok(result);
     }
+
 
     // 5️⃣ 審核通過
     [HttpPost("{storeId}/approve")]

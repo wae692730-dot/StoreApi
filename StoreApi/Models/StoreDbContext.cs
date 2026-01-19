@@ -17,13 +17,14 @@ public partial class StoreDbContext : DbContext
 
     public virtual DbSet<Store> Stores { get; set; }
 
-    public virtual DbSet<StoreOrder> StoreOrders { get; set; }
-
     public virtual DbSet<StoreProduct> StoreProducts { get; set; }
 
     public virtual DbSet<StoreReview> StoreReviews { get; set; }
 
-   
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Server=.\\sqlexpress;Database=StoreDb;Integrated Security=True;Encrypt=False;");
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Store>(entity =>
@@ -37,6 +38,7 @@ public partial class StoreDbContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime")
                 .HasColumnName("created_at");
+            entity.Property(e => e.LastReportedAt).HasColumnType("datetime");
             entity.Property(e => e.ReviewFailCount).HasColumnName("review_fail_count");
             entity.Property(e => e.SellerUid)
                 .HasMaxLength(50)
@@ -48,59 +50,6 @@ public partial class StoreDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("datetime")
                 .HasColumnName("updated_at");
-        });
-
-        modelBuilder.Entity<StoreOrder>(entity =>
-        {
-            entity.HasKey(e => e.OrderId).HasName("PK__StoreOrd__46596229E7D8CD92");
-
-            entity.ToTable("StoreOrder");
-
-            entity.Property(e => e.OrderId).HasColumnName("order_id");
-            entity.Property(e => e.BuyerUid)
-                .HasMaxLength(50)
-                .HasColumnName("buyer_uid");
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime")
-                .HasColumnName("created_at");
-            entity.Property(e => e.IsSettled).HasColumnName("is_settled");
-            entity.Property(e => e.OrderPrice)
-                .HasColumnType("decimal(10, 2)")
-                .HasColumnName("order_price");
-            entity.Property(e => e.PlatformFeeAmount)
-                .HasColumnType("decimal(10, 2)")
-                .HasColumnName("platform_fee_amount");
-            entity.Property(e => e.PlatformFeeRate)
-                .HasDefaultValue(10.00m)
-                .HasColumnType("decimal(5, 2)")
-                .HasColumnName("platform_fee_rate");
-            entity.Property(e => e.ProductId).HasColumnName("product_id");
-            entity.Property(e => e.Quantity).HasColumnName("quantity");
-            entity.Property(e => e.SellerIncome)
-                .HasColumnType("decimal(10, 2)")
-                .HasColumnName("seller_income");
-            entity.Property(e => e.SettledAt)
-                .HasColumnType("datetime")
-                .HasColumnName("settled_at");
-            entity.Property(e => e.Status).HasColumnName("status");
-            entity.Property(e => e.StoreId).HasColumnName("store_id");
-            entity.Property(e => e.TotalAmount)
-                .HasColumnType("decimal(10, 2)")
-                .HasColumnName("total_amount");
-            entity.Property(e => e.UpdatedAt)
-                .HasColumnType("datetime")
-                .HasColumnName("updated_at");
-
-            entity.HasOne(d => d.Product).WithMany(p => p.StoreOrders)
-                .HasForeignKey(d => d.ProductId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_StoreOrder_Product");
-
-            entity.HasOne(d => d.Store).WithMany(p => p.StoreOrders)
-                .HasForeignKey(d => d.StoreId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_StoreOrder_Store");
         });
 
         modelBuilder.Entity<StoreProduct>(entity =>
@@ -121,6 +70,8 @@ public partial class StoreDbContext : DbContext
             entity.Property(e => e.ImagePath)
                 .HasMaxLength(255)
                 .HasColumnName("image_path");
+            entity.Property(e => e.IsActive).HasDefaultValue(1);
+            entity.Property(e => e.LastReportedAt).HasColumnType("datetime");
             entity.Property(e => e.Location)
                 .HasMaxLength(100)
                 .HasColumnName("location");
@@ -131,6 +82,7 @@ public partial class StoreDbContext : DbContext
                 .HasMaxLength(100)
                 .HasColumnName("product_name");
             entity.Property(e => e.Quantity).HasColumnName("quantity");
+            entity.Property(e => e.Status).HasDefaultValue(4);
             entity.Property(e => e.StoreId).HasColumnName("store_id");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("datetime")

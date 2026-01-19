@@ -17,11 +17,11 @@ public class CreateStoreProductApiController : ControllerBase
     }
 
     // =========================================================
-    // 1️⃣ 新增商品
+    // 1️⃣ 新增商品（新商品 → 商品待審核）
     // =========================================================
     [HttpPost]
     public async Task<IActionResult> CreateProduct(
-        int storeId,
+       int storeId,
         [FromBody] CreateStoreProductDto dto)
     {
         if (!ModelState.IsValid)
@@ -33,8 +33,8 @@ public class CreateStoreProductApiController : ControllerBase
         if (store == null)
             return NotFound("賣場不存在");
 
-        if (store.Status == 2)
-            return BadRequest("審核失敗的賣場不可新增商品");
+        // ❗ 原始邏輯：只要賣場存在就能建商品
+        // （不判斷 Status、不做商品審核）
 
         var product = new StoreProduct
         {
@@ -46,15 +46,14 @@ public class CreateStoreProductApiController : ControllerBase
             Location = dto.Location,
             ImagePath = dto.ImagePath,
             EndDate = dto.EndDate,
+
+            // ⭐ 關鍵：什麼都不管
+            IsActive = null,     // 第一波商品
+            Status = null,       // 不走商品審核
             CreatedAt = DateTime.Now
         };
 
         _db.StoreProducts.Add(product);
-
-        // 已發布 → 修改後退回審核
-        if (store.Status == 3)
-            store.Status = 1;
-
         await _db.SaveChangesAsync();
 
         return Ok(new
@@ -64,12 +63,14 @@ public class CreateStoreProductApiController : ControllerBase
         });
     }
 
-    // 更新商品
+    // =========================================================
+    // 2️⃣ 修改商品（修改後 → 商品重新審核）
+    // =========================================================
     [HttpPut("{productId}")]
     public async Task<IActionResult> UpdateProduct(
         int storeId,
         int productId,
-        [FromBody] StoreProductDto dto)
+        [FromBody] UpdateStoreProductDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
@@ -87,39 +88,28 @@ public class CreateStoreProductApiController : ControllerBase
         if (product == null)
             return NotFound("商品不存在");
 
-        // ① 更新商品
-        product.ProductName = dto.ProductName;
-        product.Description = dto.Description;
+        // ① 只更新「允許修改」的欄位
         product.Price = dto.Price;
         product.Quantity = dto.Quantity;
-        product.Location = dto.Location;
-        product.ImagePath = dto.ImagePath;
+        product.Description = dto.Description;
         product.EndDate = dto.EndDate;
         product.UpdatedAt = DateTime.Now;
 
-        // ② 已發布 → 強制退回審核
-        if (store.Status == 3)
-        {
-            store.Status = 1;
+        // ② 修改後 → 商品重新進入審核
+        product.Status = 4;
+        //product.IsActive = 0;
 
-            // ⭐ 關鍵：明確標記 Store 為 Modified
-            _db.Stores.Update(store);
-        }
-
-        // ③ 一次性儲存
         await _db.SaveChangesAsync();
 
         return Ok(new
         {
             product.ProductId,
-            StoreStatus = store.Status,
-            Message = "商品更新成功，賣場已退回審核"
+            Message = "商品已更新，重新進入審核"
         });
     }
 
-
     // =========================================================
-    // 3️⃣ 刪除商品
+    // 3️⃣ 刪除商品（軟刪除：下架）
     // =========================================================
     [HttpDelete("{productId}")]
     public async Task<IActionResult> DeleteProduct(
@@ -139,14 +129,10 @@ public class CreateStoreProductApiController : ControllerBase
         if (product == null)
             return NotFound("商品不存在");
 
-        if (store.Status == 2)
-            return BadRequest("審核失敗的賣場不可刪除商品");
-
-        _db.StoreProducts.Remove(product);
-
-        // 已發布 → 刪除後退回審核
-        if (store.Status == 3)
-            store.Status = 1;
+        // 軟刪除：不顯示 + 狀態下架
+        product.Status = 0;
+        //product.IsActive = 0;
+        product.UpdatedAt = DateTime.Now;
 
         await _db.SaveChangesAsync();
 

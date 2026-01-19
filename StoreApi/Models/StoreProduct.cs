@@ -27,7 +27,16 @@ public partial class StoreProduct
 
     public DateTime? UpdatedAt { get; set; }
 
-    public virtual Store Store { get; set; } = null!;
+    public int? IsActive { get; set; }
 
-    public virtual ICollection<StoreOrder> StoreOrders { get; set; } = new List<StoreOrder>();
+    public int? Status { get; set; }
+
+    public int ReportCount { get; set; }
+
+    public DateTime? LastReportedAt { get; set; }
+
+ 
+
+
+    public virtual Store Store { get; set; } = null!;
 }

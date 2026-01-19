@@ -22,7 +22,7 @@ public class StoreApiController : ControllerBase
         {
             SellerUid = dto.SellerUid,
             StoreName = dto.StoreName,
-            Status = 1,               // 審核中
+            Status = 0,               // 草稿
             ReviewFailCount = 0,
             CreatedAt = DateTime.Now
         };
@@ -31,11 +31,11 @@ public class StoreApiController : ControllerBase
             .CountAsync(s => s.SellerUid == dto.SellerUid);
 
         // 2️⃣ 若已達上限（5 個）則拒絕
-        if (storeCount >= 5)
+        if (storeCount >= 10)
         {
             return BadRequest(new
             {
-                message = "此賣家最多只能建立 5 個賣場"
+                message = "此賣家最多只能建立  10 個賣場"
             });
         }
 

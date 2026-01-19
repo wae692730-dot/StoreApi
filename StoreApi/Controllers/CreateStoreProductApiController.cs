@@ -16,12 +16,11 @@ public class CreateStoreProductApiController : ControllerBase
         _db = db;
     }
 
-    // =========================================================
-    // 1️⃣ 新增商品（新商品 → 商品待審核）
-    // =========================================================
+    //  建立第一波商品（商品隨賣場一起進審核）
+  
     [HttpPost]
     public async Task<IActionResult> CreateProduct(
-       int storeId,
+        int storeId,
         [FromBody] CreateStoreProductDto dto)
     {
         if (!ModelState.IsValid)
@@ -33,8 +32,14 @@ public class CreateStoreProductApiController : ControllerBase
         if (store == null)
             return NotFound("賣場不存在");
 
-        // ❗ 原始邏輯：只要賣場存在就能建商品
-        // （不判斷 Status、不做商品審核）
+        // 只有草稿可新增商品
+        if (store.Status != 0)
+        {
+            return BadRequest(new
+            {
+                message = "賣場已送審或已發布，禁止再新增商品"
+            });
+        }
 
         var product = new StoreProduct
         {
@@ -47,9 +52,7 @@ public class CreateStoreProductApiController : ControllerBase
             ImagePath = dto.ImagePath,
             EndDate = dto.EndDate,
 
-            // ⭐ 關鍵：什麼都不管
-            IsActive = null,     // 第一波商品
-            Status = null,       // 不走商品審核
+            Status = 1,               //  商品待審核（跟賣場一起）
             CreatedAt = DateTime.Now
         };
 
@@ -59,13 +62,13 @@ public class CreateStoreProductApiController : ControllerBase
         return Ok(new
         {
             product.ProductId,
-            Message = "商品建立成功"
+            Message = "商品已建立，隨賣場進入審核"
         });
     }
 
-    // =========================================================
-    // 2️⃣ 修改商品（修改後 → 商品重新審核）
-    // =========================================================
+  
+  //修改商品（風控更新 / 重大修改需重新審核）
+   
     [HttpPut("{productId}")]
     public async Task<IActionResult> UpdateProduct(
         int storeId,
@@ -75,12 +78,6 @@ public class CreateStoreProductApiController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var store = await _db.Stores
-            .FirstOrDefaultAsync(s => s.StoreId == storeId);
-
-        if (store == null)
-            return NotFound("賣場不存在");
-
         var product = await _db.StoreProducts
             .FirstOrDefaultAsync(p => p.ProductId == productId
                                    && p.StoreId == storeId);
@@ -88,23 +85,47 @@ public class CreateStoreProductApiController : ControllerBase
         if (product == null)
             return NotFound("商品不存在");
 
-        // ① 只更新「允許修改」的欄位
-        product.Price = dto.Price;
-        product.Quantity = dto.Quantity;
+        bool needReReview = false;
+
+        // ========= 風控欄位（可直接改，不進審核） =========
+        if (product.Price != dto.Price)
+            product.Price = dto.Price;
+
+        if (product.Quantity != dto.Quantity)
+            product.Quantity = dto.Quantity;
+
+        // ========= 重大欄位（改了就要進審核） =========
+        if (product.ProductName != dto.ProductName)
+        {
+            product.ProductName = dto.ProductName;
+            needReReview = true;
+        }
+
+        if (product.ImagePath != dto.ImagePath)
+        {
+            product.ImagePath = dto.ImagePath;
+            needReReview = true;
+        }
+
+        // 其他可自由調整的資訊
         product.Description = dto.Description;
         product.EndDate = dto.EndDate;
         product.UpdatedAt = DateTime.Now;
 
-        // ② 修改後 → 商品重新進入審核
-        product.Status = 4;
-        //product.IsActive = 0;
+        // 🔁 若有重大變更 → 重新進審核
+        if (needReReview)
+        {
+            product.Status = 1; // 待審核
+        }
 
         await _db.SaveChangesAsync();
 
         return Ok(new
         {
             product.ProductId,
-            Message = "商品已更新，重新進入審核"
+            Message = needReReview
+                ? "商品已更新，因關鍵資訊變更重新進入審核"
+                : "商品已更新（價格 / 數量調整）"
         });
     }
 
@@ -116,12 +137,6 @@ public class CreateStoreProductApiController : ControllerBase
         int storeId,
         int productId)
     {
-        var store = await _db.Stores
-            .FirstOrDefaultAsync(s => s.StoreId == storeId);
-
-        if (store == null)
-            return NotFound("賣場不存在");
-
         var product = await _db.StoreProducts
             .FirstOrDefaultAsync(p => p.ProductId == productId
                                    && p.StoreId == storeId);
@@ -129,9 +144,7 @@ public class CreateStoreProductApiController : ControllerBase
         if (product == null)
             return NotFound("商品不存在");
 
-        // 軟刪除：不顯示 + 狀態下架
-        product.Status = 0;
-        //product.IsActive = 0;
+        product.Status = 0;          // 下架
         product.UpdatedAt = DateTime.Now;
 
         await _db.SaveChangesAsync();

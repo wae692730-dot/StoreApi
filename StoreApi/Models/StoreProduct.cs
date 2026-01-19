@@ -27,16 +27,15 @@ public partial class StoreProduct
 
     public DateTime? UpdatedAt { get; set; }
 
-    public int? IsActive { get; set; }
-
-    public int? Status { get; set; }
+    public bool IsActive { get; set; }
 
     public int ReportCount { get; set; }
 
     public DateTime? LastReportedAt { get; set; }
 
- 
-
+    public int Status { get; set; }
 
     public virtual Store Store { get; set; } = null!;
+
+    public virtual ICollection<StoreOrderDetail> StoreOrderDetails { get; set; } = new List<StoreOrderDetail>();
 }

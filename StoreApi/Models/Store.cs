@@ -19,11 +19,9 @@ public partial class Store
 
     public DateTime? UpdatedAt { get; set; }
 
-    public bool IsReported { get; set; }
+    public DateTime? SubmittedAt { get; set; }
 
-    public int ReportCount { get; set; }
-
-    public DateTime? LastReportedAt { get; set; }
+    public virtual ICollection<StoreOrder> StoreOrders { get; set; } = new List<StoreOrder>();
 
     public virtual ICollection<StoreProduct> StoreProducts { get; set; } = new List<StoreProduct>();
 

@@ -17,6 +17,10 @@ public partial class StoreDbContext : DbContext
 
     public virtual DbSet<Store> Stores { get; set; }
 
+    public virtual DbSet<StoreOrder> StoreOrders { get; set; }
+
+    public virtual DbSet<StoreOrderDetail> StoreOrderDetails { get; set; }
+
     public virtual DbSet<StoreProduct> StoreProducts { get; set; }
 
     public virtual DbSet<StoreReview> StoreReviews { get; set; }
@@ -35,10 +39,8 @@ public partial class StoreDbContext : DbContext
 
             entity.Property(e => e.StoreId).HasColumnName("store_id");
             entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime")
                 .HasColumnName("created_at");
-            entity.Property(e => e.LastReportedAt).HasColumnType("datetime");
             entity.Property(e => e.ReviewFailCount).HasColumnName("review_fail_count");
             entity.Property(e => e.SellerUid)
                 .HasMaxLength(50)
@@ -47,9 +49,79 @@ public partial class StoreDbContext : DbContext
             entity.Property(e => e.StoreName)
                 .HasMaxLength(100)
                 .HasColumnName("store_name");
+            entity.Property(e => e.SubmittedAt).HasColumnType("datetime");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("datetime")
                 .HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<StoreOrder>(entity =>
+        {
+            entity.HasKey(e => e.StoreOrderId).HasName("PK__store_or__87F142A665B9CB64");
+
+            entity.ToTable("StoreOrder");
+
+            entity.Property(e => e.StoreOrderId).HasColumnName("store_order_id");
+            entity.Property(e => e.BuyerUid)
+                .HasMaxLength(50)
+                .HasColumnName("buyer_uid");
+            entity.Property(e => e.CompletedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("completed_at");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("created_at");
+            entity.Property(e => e.PlatformFeeAmount)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("platform_fee_amount");
+            entity.Property(e => e.SellerReceivableAmount)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("seller_receivable_amount");
+            entity.Property(e => e.ShippedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("shipped_at");
+            entity.Property(e => e.Status).HasColumnName("status");
+            entity.Property(e => e.StoreId).HasColumnName("store_id");
+            entity.Property(e => e.TotalAmount)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("total_amount");
+
+            entity.HasOne(d => d.Store).WithMany(p => p.StoreOrders)
+                .HasForeignKey(d => d.StoreId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("fk_store_order_store");
+        });
+
+        modelBuilder.Entity<StoreOrderDetail>(entity =>
+        {
+            entity.HasKey(e => e.StoreOrderDetailId).HasName("PK__StoreOrd__9019106A34ED3A69");
+
+            entity.ToTable("StoreOrderDetail");
+
+            entity.Property(e => e.StoreOrderDetailId).HasColumnName("store_order_detail_id");
+            entity.Property(e => e.ProductName)
+                .HasMaxLength(100)
+                .HasColumnName("product_name");
+            entity.Property(e => e.Quantity).HasColumnName("quantity");
+            entity.Property(e => e.StoreOrderId).HasColumnName("store_order_id");
+            entity.Property(e => e.StoreProductId).HasColumnName("store_product_id");
+            entity.Property(e => e.SubtotalAmount)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("subtotal_amount");
+            entity.Property(e => e.UnitPrice)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("unit_price");
+
+            entity.HasOne(d => d.StoreOrder).WithMany(p => p.StoreOrderDetails)
+                .HasForeignKey(d => d.StoreOrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("fk_store_order_detail_order");
+
+            entity.HasOne(d => d.StoreProduct).WithMany(p => p.StoreOrderDetails)
+                .HasForeignKey(d => d.StoreProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("fk_store_order_detail_product");
         });
 
         modelBuilder.Entity<StoreProduct>(entity =>
@@ -70,7 +142,7 @@ public partial class StoreDbContext : DbContext
             entity.Property(e => e.ImagePath)
                 .HasMaxLength(255)
                 .HasColumnName("image_path");
-            entity.Property(e => e.IsActive).HasDefaultValue(1);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.LastReportedAt).HasColumnType("datetime");
             entity.Property(e => e.Location)
                 .HasMaxLength(100)

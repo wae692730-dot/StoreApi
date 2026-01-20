@@ -35,6 +35,8 @@ public partial class StoreProduct
 
     public int Status { get; set; }
 
+    public string? RejectReason { get; set; }
+
     public virtual Store Store { get; set; } = null!;
 
     public virtual ICollection<StoreOrderDetail> StoreOrderDetails { get; set; } = new List<StoreOrderDetail>();

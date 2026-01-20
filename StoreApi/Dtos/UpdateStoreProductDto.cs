@@ -1,11 +1,15 @@
-﻿namespace StoreApi.Dtos
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace StoreApi.Dtos
 {
     public class UpdateStoreProductDto
     {
         public decimal Price { get; set; }
         public int Quantity { get; set; }
         public string? Description { get; set; }
-        public string? ImagePath { get; set; }
+
+        [Required(ErrorMessage = "請上傳商品圖片")]
+        public IFormFile? Image { get; set; }
         public string ProductName { get; set; } = null!;
         public DateTime? EndDate { get; set; }
 

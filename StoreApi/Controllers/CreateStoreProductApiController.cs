@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using StoreApi.Models;
 using StoreApi.Dtos;
+using StoreApi.Services;
+
 
 namespace StoreApi.Controllers;
 
@@ -10,10 +12,17 @@ namespace StoreApi.Controllers;
 public class CreateStoreProductApiController : ControllerBase
 {
     private readonly StoreDbContext _db;
+    private readonly ImageUploadService _imageService;
 
-    public CreateStoreProductApiController(StoreDbContext db)
+
+
+    public CreateStoreProductApiController(StoreDbContext db, ImageUploadService imageService)
     {
         _db = db;
+        _imageService = imageService;
+
+
+
     }
 
     //  建立第一波商品（商品隨賣場一起進審核）
@@ -21,7 +30,9 @@ public class CreateStoreProductApiController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateProduct(
         int storeId,
-        [FromBody] CreateStoreProductDto dto)
+        [FromForm] CreateStoreProductDto dto)
+
+
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
@@ -41,6 +52,9 @@ public class CreateStoreProductApiController : ControllerBase
             });
         }
 
+        // ================== 圖片處理 ==================
+        var imagePath = await _imageService.SaveProductImageAsync(dto.Image);
+
         var product = new StoreProduct
         {
             StoreId = storeId,
@@ -49,12 +63,15 @@ public class CreateStoreProductApiController : ControllerBase
             Price = dto.Price,
             Quantity = dto.Quantity,
             Location = dto.Location,
-            ImagePath = dto.ImagePath,
             EndDate = dto.EndDate,
 
-            Status = 1,               //  商品待審核（跟賣場一起）
+            // ⭐ 這一行是重點
+            ImagePath = imagePath,
+
+            Status = 1,
             CreatedAt = DateTime.Now
         };
+
 
         _db.StoreProducts.Add(product);
         await _db.SaveChangesAsync();
@@ -62,6 +79,7 @@ public class CreateStoreProductApiController : ControllerBase
         return Ok(new
         {
             product.ProductId,
+            product.ImagePath,
             Message = "商品已建立，隨賣場進入審核"
         });
     }
@@ -73,7 +91,7 @@ public class CreateStoreProductApiController : ControllerBase
     public async Task<IActionResult> UpdateProduct(
         int storeId,
         int productId,
-        [FromBody] UpdateStoreProductDto dto)
+        [FromForm] UpdateStoreProductDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
@@ -100,12 +118,17 @@ public class CreateStoreProductApiController : ControllerBase
             product.ProductName = dto.ProductName;
             needReReview = true;
         }
+        // ================== 圖片處理 ==================
+        var newImagePath = await _imageService.SaveProductImageAsync(dto.Image);
 
-        if (product.ImagePath != dto.ImagePath)
+        if (newImagePath != null)
         {
-            product.ImagePath = dto.ImagePath;
+            _imageService.DeleteImage(product.ImagePath);
+
+            product.ImagePath = newImagePath;
             needReReview = true;
         }
+
 
         // 其他可自由調整的資訊
         product.Description = dto.Description;
@@ -130,13 +153,17 @@ public class CreateStoreProductApiController : ControllerBase
     }
 
     // =========================================================
-    // 3️⃣ 刪除商品（軟刪除：下架）
+    // 3️⃣ 刪除商品（軟刪除：下架） 讓狀態變成0 尚未送審 可新增賞品
     // =========================================================
     [HttpDelete("{productId}")]
     public async Task<IActionResult> DeleteProduct(
         int storeId,
         int productId)
     {
+        var store = await _db.Stores.FindAsync(storeId);
+        if (store == null)
+            return NotFound("賣場不存在");
+
         var product = await _db.StoreProducts
             .FirstOrDefaultAsync(p => p.ProductId == productId
                                    && p.StoreId == storeId);
@@ -144,11 +171,24 @@ public class CreateStoreProductApiController : ControllerBase
         if (product == null)
             return NotFound("商品不存在");
 
-        product.Status = 0;          // 下架
+        // 軟刪除（下架）
+        product.IsActive = false;
         product.UpdatedAt = DateTime.Now;
 
         await _db.SaveChangesAsync();
 
-        return NoContent();
+        // ⭐ UX 提示文字（不影響任何狀態）
+        if (store.Status == 0 || store.Status == 1)
+        {
+            return Ok(new
+            {
+                message = "商品尚未送審，可繼續新增商品並重新送審"
+            });
+        }
+
+        return Ok(new
+        {
+            message = "商品已下架"
+        });
     }
 }

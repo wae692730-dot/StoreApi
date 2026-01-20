@@ -49,12 +49,25 @@ public class StoreReviewApiController : ControllerBase
     [HttpPost("{storeId}/approve")]
     public async Task<IActionResult> ApproveStore(int storeId, [FromBody] ReviewDto dto)
     {
-        var store = await _db.Stores.FindAsync(storeId);
-        if (store == null) return NotFound();
+        var store = await _db.Stores
+             .Include(s => s.StoreProducts) // ⭐ 一定要 Include 商品
+             .FirstOrDefaultAsync(s => s.StoreId == storeId);
 
+        if (store == null)
+            return NotFound();
+
+        // 1️⃣ 賣場通過
         store.Status = 3;             // 已發布
         store.ReviewFailCount = 0;
 
+        // 2️⃣ ⭐ 關鍵：啟用「第一波商品」
+        foreach (var product in store.StoreProducts)
+        {
+            product.Status = 3;       // 已發布
+            product.IsActive = true;  // ⭐ 這行就是你在找的
+        }
+
+        // 3️⃣ 寫入審核紀錄
         _db.StoreReviews.Add(new StoreReview
         {
             StoreId = storeId,
@@ -64,8 +77,10 @@ public class StoreReviewApiController : ControllerBase
         });
 
         await _db.SaveChangesAsync();
-        return Ok();
+        return Ok(new { message = "賣場審核通過，第一波商品已同步上架" });
     }
+
+
 
     // 6️⃣ 審核不通過
     [HttpPost("{storeId}/reject")]

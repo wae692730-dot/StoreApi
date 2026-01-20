@@ -9,6 +9,7 @@ namespace StoreApi.Controllers
 {
     [ApiController]
     [Route("api/store/{storeId}/products/new")]
+ 
     public class NewStoreProductApiController : ControllerBase
     {
         private readonly StoreDbContext _db;

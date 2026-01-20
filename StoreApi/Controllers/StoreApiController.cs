@@ -5,6 +5,7 @@ using StoreApi.Dtos;
 
 [ApiController]
 [Route("api/store")]
+
 public class StoreApiController : ControllerBase
 {
     private readonly StoreDbContext _db;

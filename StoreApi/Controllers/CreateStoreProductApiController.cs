@@ -9,6 +9,7 @@ namespace StoreApi.Controllers;
 
 [ApiController]
 [Route("api/store/{storeId}/products")]
+
 public class CreateStoreProductApiController : ControllerBase
 {
     private readonly StoreDbContext _db;
@@ -139,7 +140,9 @@ public class CreateStoreProductApiController : ControllerBase
         if (needReReview)
         {
             product.Status = 1; // 待審核
+            product.IsActive = false; // 資料庫顯示0 前端不會看到
         }
+
 
         await _db.SaveChangesAsync();
 

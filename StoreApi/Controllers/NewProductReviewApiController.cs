@@ -17,9 +17,9 @@ namespace StoreApi.Controllers
             _db = db;
         }
 
-        // =========================================================
-        // 1️⃣ 取得「第二波待審核商品清單」
-        // =========================================================
+       
+        //  取得「第二波待審核商品清單」
+       
         [HttpGet("pending")]
         public async Task<IActionResult> GetPendingNewProducts()
         {

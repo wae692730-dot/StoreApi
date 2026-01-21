@@ -2,7 +2,7 @@
 
 namespace StoreApi.Dtos
 {
-    public class UpdateStoreProductDto
+    public class EditProductDto
     {
         public decimal Price { get; set; }
         public int Quantity { get; set; }

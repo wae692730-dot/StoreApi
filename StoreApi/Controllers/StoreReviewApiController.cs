@@ -15,8 +15,8 @@ public class StoreReviewApiController : ControllerBase
     {
         _db = db;
     }
-    // 審核賣場
-    [HttpGet("pending")]
+    
+    [HttpGet("storepending")] // 第一波 撈賣場+第一波賞品資料
     public async Task<IActionResult> GetPendingStores()
     {
         var stores = await _db.Stores
@@ -46,29 +46,29 @@ public class StoreReviewApiController : ControllerBase
     }
 
 
-    // 5️⃣ 審核通過
-    [HttpPost("{storeId}/approve")]
+  
+    [HttpPost("{storeId}/storeapprove")]  // 賣場審核通過
     public async Task<IActionResult> ApproveStore(int storeId, [FromBody] ReviewDto dto)
     {
         var store = await _db.Stores
-             .Include(s => s.StoreProducts) // ⭐ 一定要 Include 商品
+             .Include(s => s.StoreProducts) //  一定要 Include 商品
              .FirstOrDefaultAsync(s => s.StoreId == storeId);
 
         if (store == null)
             return NotFound();
 
-        // 1️⃣ 賣場通過
+        // 賣場通過
         store.Status = 3;             // 已發布
         store.ReviewFailCount = 0;
 
-        // 2️⃣ ⭐ 關鍵：啟用「第一波商品」
+        // 連同賣場一起啟用第一波商品
         foreach (var product in store.StoreProducts)
         {
             product.Status = 3;       // 已發布
-            product.IsActive = true;  // ⭐ 這行就是你在找的
+            product.IsActive = true;  // 前端顯示
         }
 
-        // 3️⃣ 寫入審核紀錄
+        // 寫入審核紀錄
         _db.StoreReviews.Add(new StoreReview
         {
             StoreId = storeId,
@@ -83,8 +83,8 @@ public class StoreReviewApiController : ControllerBase
 
 
 
-    // 6️⃣ 審核不通過
-    [HttpPost("{storeId}/reject")]
+    
+    [HttpPost("{storeId}/storereject")]// 賣場審核不通過
     public async Task<IActionResult> RejectStore(int storeId, [FromBody] ReviewDto dto)
     {
         var store = await _db.Stores.FindAsync(storeId);

@@ -12,6 +12,7 @@ namespace StoreApi.Dtos
         public IFormFile? Image { get; set; }
         public string ProductName { get; set; } = null!;
         public DateTime? EndDate { get; set; }
+        public string? Location { get; set; }
 
     }
 }

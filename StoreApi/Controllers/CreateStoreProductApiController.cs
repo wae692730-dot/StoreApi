@@ -8,7 +8,7 @@ using StoreApi.Services;
 namespace StoreApi.Controllers;
 
 [ApiController]
-[Route("api/store/{storeId}/products")]
+[Route("api/store/{storeId}/createproducts")]
 
 public class CreateStoreProductApiController : ControllerBase
 {
@@ -73,7 +73,7 @@ public class CreateStoreProductApiController : ControllerBase
         });
     }
 
-    [HttpPut("{productId}/Edit")]   // 修改審核中的商品資訊
+    [HttpPut("{productId}/edit")]   // 修改審核中的商品資訊
     public async Task<IActionResult> EditProduct(int storeId,int productId,[FromForm] EditProductDto dto)
     {
         if (!ModelState.IsValid)
@@ -86,63 +86,50 @@ public class CreateStoreProductApiController : ControllerBase
         if (product == null)
             return NotFound("商品不存在");
 
-        
-        if (product.Store.Status == 3) 
-            return BadRequest("賣場已發布，請使用商品異動 API");
+        if (product.Status == 3)
+            return BadRequest("商品已發布，請使用商品修改 API");
 
-        bool needReReview = false;
-
-        //  風控欄位（可直接改，不進審核）
-        if (product.Price != dto.Price)
-            product.Price = dto.Price;
-        if (product.Quantity != dto.Quantity)
-            product.Quantity = dto.Quantity;
-
-        // 重大欄位（改了就要進審核）
+     
         if (product.ProductName != dto.ProductName)
         {
             product.ProductName = dto.ProductName;
-            needReReview = true;
-        }
-        
-        var newImagePath = await _imageService.SaveProductImageAsync(dto.Image);
-
-        if (newImagePath != null)
-        {
-            _imageService.DeleteImage(product.ImagePath);
-
-            product.ImagePath = newImagePath;
-            needReReview = true;
+           
         }
 
-
-        // 其他可自由調整的資訊
+        product.ProductName = dto.ProductName;
+        product.Price = dto.Price;
+        product.Quantity = dto.Quantity;
         product.Description = dto.Description;
         product.EndDate = dto.EndDate;
-        product.UpdatedAt = DateTime.Now;
+        product.Location = dto.Location;
 
-        // 若有重大變更則重新進審核
-        if (needReReview)
+
+        if (dto.Image != null)
         {
+            var newImagePath = await _imageService.SaveProductImageAsync(dto.Image);
+
+            if (!string.IsNullOrEmpty(newImagePath))
+            {
+                _imageService.DeleteImage(product.ImagePath);
+                product.ImagePath = newImagePath;
+            }
+        }
             product.Status = 1; // 待審核
             product.IsActive = false; // 資料庫顯示0 前端不會看到
-        }
-
-
+            product.UpdatedAt = DateTime.Now;
         await _db.SaveChangesAsync();
 
         return Ok(new
         {
             product.ProductId,
-            Message = needReReview
-                ? "商品已更新，因關鍵資訊變更重新進入審核"
-                : "商品已更新（價格 / 數量調整）"
+            product.Status,
+            message = "商品已更新，重新進入審核流程"
         });
     }
 
 
-    //  刪除商品按鈕但資料庫還是會存在紀錄 讓狀態變成0 變成草稿中可新增賞品
-    [HttpDelete("{productId}")]
+    //  刪除審核中的商品 但資料庫還是會存在紀錄 讓狀態變成0 變成草稿中可新增第一波商品
+    [HttpDelete("{productId}/delete")]
     public async Task<IActionResult> DeleteProduct(
         int storeId,
         int productId)
@@ -175,7 +162,7 @@ public class CreateStoreProductApiController : ControllerBase
 
         return Ok(new
         {
-            message = "商品已下架"
+            message = "商品已刪除"
         });
     }
 }

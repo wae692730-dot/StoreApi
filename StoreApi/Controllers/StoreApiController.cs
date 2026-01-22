@@ -4,7 +4,7 @@ using StoreApi.Models;
 using StoreApi.Dtos;
 
 [ApiController]
-[Route("api/store")]
+[Route("api/createstore")]
 
 public class StoreApiController : ControllerBase
 {
@@ -15,8 +15,8 @@ public class StoreApiController : ControllerBase
         _db = db;
     }
 
-    //  建立賣場（賣家）
-    [HttpPost]
+    
+    [HttpPost] //  建立賣場
     public async Task<IActionResult> CreateStore([FromBody] CreateStoreDto dto)
     {
         var store = new Store
@@ -27,11 +27,11 @@ public class StoreApiController : ControllerBase
             ReviewFailCount = 0,
             CreatedAt = DateTime.Now
         };
-        // 1️⃣ 計算此賣家已建立的賣場數量
+        // 計算此賣家已建立的賣場數量
         int storeCount = await _db.Stores
             .CountAsync(s => s.SellerUid == dto.SellerUid);
 
-        // 2️⃣ 若已達上限（5 個）則拒絕
+        // 若已達上限（10 個）則拒絕
         if (storeCount >= 10)
         {
             return BadRequest(new
@@ -50,9 +50,9 @@ public class StoreApiController : ControllerBase
         });
     }
 
-    //  賣家查看自己的賣場
-    [HttpGet("my/{sellerUid}")]
-    public async Task<IActionResult> GetMyStores(string sellerUid)
+    
+    [HttpGet("my/{sellerUid}/mystore")]//  賣家查看自己的賣場
+    public async Task<IActionResult> GetMyStore(string sellerUid)
     {
         var stores = await _db.Stores
             .Where(s => s.SellerUid == sellerUid)
@@ -61,8 +61,8 @@ public class StoreApiController : ControllerBase
         return Ok(stores);
     }
 
-    //  一般使用者查看已發布賣場
-    [HttpGet("public")]
+   
+    [HttpGet("public")]   //  一般使用者查看已發布賣場
     public async Task<IActionResult> GetPublicStores()
     {
         var stores = await _db.Stores

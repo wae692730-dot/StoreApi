@@ -23,6 +23,8 @@ public partial class StoreDbContext : DbContext
 
     public virtual DbSet<StoreProduct> StoreProducts { get; set; }
 
+    public virtual DbSet<StoreProductReview> StoreProductReviews { get; set; }
+
     public virtual DbSet<StoreReview> StoreReviews { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -165,6 +167,32 @@ public partial class StoreDbContext : DbContext
                 .HasForeignKey(d => d.StoreId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StoreProduct_Store");
+        });
+
+        modelBuilder.Entity<StoreProductReview>(entity =>
+        {
+            entity.HasKey(e => e.ProductReviewId).HasName("PK__StorePro__8440EB03E1A8198D");
+
+            entity.ToTable("StoreProductReview");
+
+            entity.Property(e => e.ProductReviewId).HasColumnName("product_review_id");
+            entity.Property(e => e.Comment)
+                .HasMaxLength(500)
+                .HasColumnName("comment");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("created_at");
+            entity.Property(e => e.ProductId).HasColumnName("product_id");
+            entity.Property(e => e.Result).HasColumnName("result");
+            entity.Property(e => e.ReviewerUid)
+                .HasMaxLength(50)
+                .HasColumnName("reviewer_uid");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.StoreProductReviews)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProductReview_Product");
         });
 
         modelBuilder.Entity<StoreReview>(entity =>

@@ -40,4 +40,6 @@ public partial class StoreProduct
     public virtual Store Store { get; set; } = null!;
 
     public virtual ICollection<StoreOrderDetail> StoreOrderDetails { get; set; } = new List<StoreOrderDetail>();
+
+    public virtual ICollection<StoreProductReview> StoreProductReviews { get; set; } = new List<StoreProductReview>();
 }

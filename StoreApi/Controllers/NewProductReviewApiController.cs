@@ -48,8 +48,7 @@ namespace StoreApi.Controllers
         }
 
     
-        // 審核通過 -> 商品發布
-     
+        // 審核通過 -> 商品發布   
         [HttpPost("{productId}/approveproduct")]
         public async Task<IActionResult> ApproveProduct(int productId,[FromBody] ReviewDto dto)
 
@@ -102,26 +101,20 @@ namespace StoreApi.Controllers
             .FirstOrDefaultAsync(p => p.ProductId == productId);
 
             if (product == null)
-                return NotFound();
+            return NotFound("商品不存在");
 
             if (product.Status != 1)
-                return BadRequest("此商品不在審核中");
+            return BadRequest("此商品不在審核中");
 
-            var store = product.Store;
+            // 賣場停權不可操作
+            if (product.Store.Status == 4)
+            return BadRequest("賣場已停權，無法審核商品");
 
+            //商品退回
             product.Status = 2; // 審核失敗
             product.IsActive = false; // 前端不顯示
             product.RejectReason = dto.Comment;
             product.UpdatedAt = DateTime.Now;
-
-            // 累積賣場審核失敗次數
-            store.ReviewFailCount += 1;
-
-            // 判斷是否停權
-            if (store.ReviewFailCount >= 5)
-            {
-                store.Status = 4; // 停權
-            }
 
             //  寫入商品審核紀錄
             _db.StoreProductReviews.Add(new StoreProductReview
@@ -137,9 +130,7 @@ namespace StoreApi.Controllers
 
             return Ok(new
             {
-                message = store.Status == 4
-          ? "商品審核未通過，賣場因多次違規已被停權"
-          : "商品審核未通過"
+                message = "商品審核未通過，已退回賣家修改"
             });
         }
     }

@@ -35,6 +35,8 @@ public class CreateStoreProductApiController : ControllerBase
         if (store == null)
             return NotFound("賣場不存在");
 
+
+
         // 只有草稿可新增商品
         if (store.Status != 0)
         {
@@ -128,15 +130,18 @@ public class CreateStoreProductApiController : ControllerBase
     }
 
 
-    //  刪除審核中的商品 但資料庫還是會存在紀錄 讓狀態變成0 變成草稿中可新增第一波商品
-    [HttpDelete("{productId}/delete")]
-    public async Task<IActionResult> DeleteProduct(
+    //  移除待審核中的商品，可繼續新增商品並重新送審
+    [HttpDelete("{productId}/withdraw")]
+    public async Task<IActionResult> Withdraw(
         int storeId,
         int productId)
     {
         var store = await _db.Stores.FindAsync(storeId);
         if (store == null)
             return NotFound("賣場不存在");
+
+        if (store.Status == 4)
+            return BadRequest("賣場已停權，無法操作商品");
 
         var product = await _db.StoreProducts
             .FirstOrDefaultAsync(p => p.ProductId == productId
@@ -145,24 +150,22 @@ public class CreateStoreProductApiController : ControllerBase
         if (product == null)
             return NotFound("商品不存在");
 
-        // 下架
+        // 僅限草稿 / 審核中
+        if (product.Status != 0 && product.Status != 1)
+            return BadRequest("此商品狀態不可撤回");
+
+
+        // 刪除僅限草稿跟審核中
+        product.Status = 5; // 撤回狀態
         product.IsActive = false;
         product.UpdatedAt = DateTime.Now;
 
         await _db.SaveChangesAsync();
 
-        // 純提示文字 沒任何功能
-        if (store.Status == 0 || store.Status == 1)
-        {
-            return Ok(new
-            {
-                message = "商品尚未送審，可繼續新增商品並重新送審"
-            });
-        }
-
+    
         return Ok(new
         {
-            message = "商品已刪除"
+            message = "商品已移除，可繼續新增商品並重新送審"
         });
     }
 }

@@ -62,13 +62,66 @@ public class StoreApiController : ControllerBase
     }
 
    
-    [HttpGet("public")]   //  一般使用者查看已發布賣場
+    [HttpGet("forpublic")]   // 非會員對象可以查看賣場底下與商品
     public async Task<IActionResult> GetPublicStores()
     {
         var stores = await _db.Stores
-            .Where(s => s.Status == 3) // 已發布
-            .ToListAsync();
+      .Where(s => s.Status == 3) // 已發布賣場
+      .Select(s => new
+      {
+          s.StoreId,
+          s.StoreName,
+
+          Products = s.StoreProducts
+              .Where(p => p.Status == 3 && p.IsActive)
+              .Select(p => new
+              {
+                  p.ProductId,
+                  p.ProductName,
+                  p.Price
+              })
+              .ToList()
+      })
+      .ToListAsync();
 
         return Ok(stores);
     }
+
+ 
+    // 取得賣場詳細資料（包含底下所有商品）
+    [HttpGet("{storeId}/myproduct")]
+    public async Task<IActionResult> GetStoreDetail(int storeId)
+    {
+        var store = await _db.Stores
+            .Where(s => s.StoreId == storeId)
+            .Select(s => new
+            {
+                s.StoreId,
+                s.StoreName,
+                s.Status,
+                s.ReviewFailCount,
+                s.CreatedAt,
+
+                Products = s.StoreProducts
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Select(p => new
+                    {
+                        p.ProductId,
+                        p.ProductName,
+                        p.Price,
+                        p.Quantity,
+                        p.Status,
+                        p.IsActive,
+                        p.CreatedAt
+                    })
+                    .ToList()
+            })
+            .FirstOrDefaultAsync();
+
+        if (store == null)
+            return NotFound("賣場不存在");
+
+        return Ok(store);
+    }
+
 }

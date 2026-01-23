@@ -15,11 +15,11 @@ public partial class StoreDbContext : DbContext
     {
     }
 
+    public virtual DbSet<BuyerOrder> BuyerOrders { get; set; }
+
+    public virtual DbSet<BuyerOrderDetail> BuyerOrderDetails { get; set; }
+
     public virtual DbSet<Store> Stores { get; set; }
-
-    public virtual DbSet<StoreOrder> StoreOrders { get; set; }
-
-    public virtual DbSet<StoreOrderDetail> StoreOrderDetails { get; set; }
 
     public virtual DbSet<StoreProduct> StoreProducts { get; set; }
 
@@ -33,6 +33,78 @@ public partial class StoreDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<BuyerOrder>(entity =>
+        {
+            entity.HasKey(e => e.BuyerOrderId).HasName("PK__BuyerOrd__A73AB6402703142F");
+
+            entity.ToTable("BuyerOrder");
+
+            entity.Property(e => e.BuyerOrderId).HasColumnName("buyer_order_id");
+            entity.Property(e => e.BuyerUid)
+                .HasMaxLength(50)
+                .HasColumnName("buyer_uid");
+            entity.Property(e => e.CompletedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("completed_at");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("created_at");
+            entity.Property(e => e.ReceiverName)
+                .HasMaxLength(50)
+                .HasColumnName("receiver_name");
+            entity.Property(e => e.ReceiverPhone)
+                .HasMaxLength(20)
+                .HasColumnName("receiver_phone");
+            entity.Property(e => e.ShippedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("shipped_at");
+            entity.Property(e => e.ShippingAddress)
+                .HasMaxLength(255)
+                .HasColumnName("shipping_address");
+            entity.Property(e => e.Status).HasColumnName("status");
+            entity.Property(e => e.StoreId).HasColumnName("store_id");
+            entity.Property(e => e.TotalAmount)
+                .HasColumnType("decimal(15, 2)")
+                .HasColumnName("total_amount");
+
+            entity.HasOne(d => d.Store).WithMany(p => p.BuyerOrders)
+                .HasForeignKey(d => d.StoreId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_BuyerOrder_Store");
+        });
+
+        modelBuilder.Entity<BuyerOrderDetail>(entity =>
+        {
+            entity.HasKey(e => e.BuyerOrderDetailId).HasName("PK__BuyerOrd__A3064022B2A50535");
+
+            entity.ToTable("BuyerOrderDetail");
+
+            entity.Property(e => e.BuyerOrderDetailId).HasColumnName("buyer_order_detail_id");
+            entity.Property(e => e.BuyerOrderId).HasColumnName("buyer_order_id");
+            entity.Property(e => e.ProductName)
+                .HasMaxLength(255)
+                .HasColumnName("product_name");
+            entity.Property(e => e.Quantity).HasColumnName("quantity");
+            entity.Property(e => e.StoreProductId).HasColumnName("store_product_id");
+            entity.Property(e => e.SubtotalAmount)
+                .HasColumnType("decimal(15, 2)")
+                .HasColumnName("subtotal_amount");
+            entity.Property(e => e.UnitPrice)
+                .HasColumnType("decimal(15, 2)")
+                .HasColumnName("unit_price");
+
+            entity.HasOne(d => d.BuyerOrder).WithMany(p => p.BuyerOrderDetails)
+                .HasForeignKey(d => d.BuyerOrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_BuyerOrderDetail_Order");
+
+            entity.HasOne(d => d.StoreProduct).WithMany(p => p.BuyerOrderDetails)
+                .HasForeignKey(d => d.StoreProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_BuyerOrderDetail_Product");
+        });
+
         modelBuilder.Entity<Store>(entity =>
         {
             entity.HasKey(e => e.StoreId).HasName("PK__Store__A2F2A30C48FE1917");
@@ -43,6 +115,7 @@ public partial class StoreDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasColumnType("datetime")
                 .HasColumnName("created_at");
+            entity.Property(e => e.RecoverAt).HasColumnType("datetime");
             entity.Property(e => e.ReviewFailCount).HasColumnName("review_fail_count");
             entity.Property(e => e.SellerUid)
                 .HasMaxLength(50)
@@ -55,75 +128,6 @@ public partial class StoreDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("datetime")
                 .HasColumnName("updated_at");
-        });
-
-        modelBuilder.Entity<StoreOrder>(entity =>
-        {
-            entity.HasKey(e => e.StoreOrderId).HasName("PK__store_or__87F142A665B9CB64");
-
-            entity.ToTable("StoreOrder");
-
-            entity.Property(e => e.StoreOrderId).HasColumnName("store_order_id");
-            entity.Property(e => e.BuyerUid)
-                .HasMaxLength(50)
-                .HasColumnName("buyer_uid");
-            entity.Property(e => e.CompletedAt)
-                .HasColumnType("datetime")
-                .HasColumnName("completed_at");
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime")
-                .HasColumnName("created_at");
-            entity.Property(e => e.PlatformFeeAmount)
-                .HasColumnType("decimal(10, 2)")
-                .HasColumnName("platform_fee_amount");
-            entity.Property(e => e.SellerReceivableAmount)
-                .HasColumnType("decimal(10, 2)")
-                .HasColumnName("seller_receivable_amount");
-            entity.Property(e => e.ShippedAt)
-                .HasColumnType("datetime")
-                .HasColumnName("shipped_at");
-            entity.Property(e => e.Status).HasColumnName("status");
-            entity.Property(e => e.StoreId).HasColumnName("store_id");
-            entity.Property(e => e.TotalAmount)
-                .HasColumnType("decimal(10, 2)")
-                .HasColumnName("total_amount");
-
-            entity.HasOne(d => d.Store).WithMany(p => p.StoreOrders)
-                .HasForeignKey(d => d.StoreId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("fk_store_order_store");
-        });
-
-        modelBuilder.Entity<StoreOrderDetail>(entity =>
-        {
-            entity.HasKey(e => e.StoreOrderDetailId).HasName("PK__StoreOrd__9019106A34ED3A69");
-
-            entity.ToTable("StoreOrderDetail");
-
-            entity.Property(e => e.StoreOrderDetailId).HasColumnName("store_order_detail_id");
-            entity.Property(e => e.ProductName)
-                .HasMaxLength(100)
-                .HasColumnName("product_name");
-            entity.Property(e => e.Quantity).HasColumnName("quantity");
-            entity.Property(e => e.StoreOrderId).HasColumnName("store_order_id");
-            entity.Property(e => e.StoreProductId).HasColumnName("store_product_id");
-            entity.Property(e => e.SubtotalAmount)
-                .HasColumnType("decimal(10, 2)")
-                .HasColumnName("subtotal_amount");
-            entity.Property(e => e.UnitPrice)
-                .HasColumnType("decimal(10, 2)")
-                .HasColumnName("unit_price");
-
-            entity.HasOne(d => d.StoreOrder).WithMany(p => p.StoreOrderDetails)
-                .HasForeignKey(d => d.StoreOrderId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("fk_store_order_detail_order");
-
-            entity.HasOne(d => d.StoreProduct).WithMany(p => p.StoreOrderDetails)
-                .HasForeignKey(d => d.StoreProductId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("fk_store_order_detail_product");
         });
 
         modelBuilder.Entity<StoreProduct>(entity =>

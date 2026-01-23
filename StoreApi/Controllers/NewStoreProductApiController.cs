@@ -19,7 +19,7 @@ namespace StoreApi.Controllers
             _db = db;
             _imageService = imageService;
         }
-        //  已發布賣場下新增商品（第二波）
+        //  已發布的賣場下新增商品（第二波）
         [HttpPost]
         public async Task<IActionResult> CreateNewProduct(int storeId,[FromForm] CreateStoreProductDto dto)
         {
@@ -69,8 +69,7 @@ namespace StoreApi.Controllers
             });
         }
        
-        // 已發布商品僅允許調整 價格跟數量（不送審）
-    
+        // 已發布商品僅允許調整 價格跟數量（不送審）   
         [HttpPut("{productId}/update-price-quantity")]
         public async Task<IActionResult> UpdateNewProduct(
             int storeId,
@@ -176,8 +175,8 @@ namespace StoreApi.Controllers
 
    
         // 下架商品（不刪資料）
-        [HttpDelete("{productId}/invisible")]
-        public async Task<IActionResult> invisibleProduct(
+        [HttpDelete("{productId}/deactivate")]
+        public async Task<IActionResult> deleteProduct(
             int storeId,
             int productId)
         {

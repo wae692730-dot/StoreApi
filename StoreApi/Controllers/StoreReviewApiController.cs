@@ -84,14 +84,27 @@ public class StoreReviewApiController : ControllerBase
 
 
     
-    [HttpPost("{storeId}/storereject")]// 賣場審核不通過
+    [HttpPost("{storeId}/rejectstore")]// 賣場審核不通過
     public async Task<IActionResult> RejectStore(int storeId, [FromBody] ReviewDto dto)
     {
         var store = await _db.Stores.FindAsync(storeId);
-        if (store == null) return NotFound();
+        if (store == null) 
+        return NotFound("賣場不存在");
+
+        // 已停權不可再審
+        if (store.Status == 4)
+        return BadRequest("賣場已停權");
 
         store.Status = 2;               // 審核失敗
         store.ReviewFailCount += 1;
+        store.Status = 4;
+        store.RecoverAt = DateTime.Now.AddDays(7);
+
+        // 超過次數 → 停權
+        if (store.ReviewFailCount >= 5)
+        {
+            store.Status = 4;
+        }
 
         _db.StoreReviews.Add(new StoreReview
         {
@@ -103,6 +116,11 @@ public class StoreReviewApiController : ControllerBase
         });
 
         await _db.SaveChangesAsync();
-        return Ok();
+        return Ok(new
+        {
+            message = store.Status == 4
+          ? "賣場審核未通過，已達上限並遭停權"
+          : "賣場審核未通過"
+        });
     }
 }

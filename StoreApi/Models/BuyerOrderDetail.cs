@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace StoreApi.Models;
 
-public partial class StoreOrderDetail
+public partial class BuyerOrderDetail
 {
-    public int StoreOrderDetailId { get; set; }
+    public int BuyerOrderDetailId { get; set; }
 
-    public int StoreOrderId { get; set; }
+    public int BuyerOrderId { get; set; }
 
     public int StoreProductId { get; set; }
 
@@ -19,7 +19,7 @@ public partial class StoreOrderDetail
 
     public decimal SubtotalAmount { get; set; }
 
-    public virtual StoreOrder StoreOrder { get; set; } = null!;
+    public virtual BuyerOrder BuyerOrder { get; set; } = null!;
 
     public virtual StoreProduct StoreProduct { get; set; } = null!;
 }

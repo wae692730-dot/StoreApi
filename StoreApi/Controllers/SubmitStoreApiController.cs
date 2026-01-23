@@ -27,8 +27,9 @@ namespace StoreApi.Controllers
             if (store == null)
                 return NotFound("賣場不存在");
 
-            if (store.Status != 0)
-                return BadRequest("賣場狀態錯誤，無法送審");
+            // 允許首次 (0) 與重新送審 (2)
+            if (store.Status != 0 && store.Status != 2)
+                return BadRequest("目前賣場狀態不可送審");
 
             if (!store.StoreProducts.Any())
                 return BadRequest("賣場至少需建立一個商品才能送審");
@@ -38,7 +39,7 @@ namespace StoreApi.Controllers
 
             foreach (var product in store.StoreProducts)
             {
-                if (product.Status == 0) // 尚未送審的第一波商品
+                if (product.Status == 0 || product.Status == 2) // 尚未送審的第一波商品跟修改後的商品
                 {
                     product.Status = 1;      // 商品審核中
                     product.IsActive = false; // 審核中前端不顯示
@@ -49,7 +50,7 @@ namespace StoreApi.Controllers
 
             return Ok(new
             {
-                message = "賣場已送審，內容已鎖定"
+                message = "賣場已送審"
             });
         }
     }

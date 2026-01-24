@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using StoreApi.Models;
+using StoreApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,8 @@ builder.Services.AddDbContext<StoreDbContext>(options =>
         builder.Configuration.GetConnectionString("StoreDbContext")
     );
 });
+builder.Services.AddScoped<ImageUploadService>();
+
 
 var app = builder.Build();
 
@@ -27,6 +31,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseStaticFiles();
+
 app.UseAuthorization();
 
 // 這行「一定要有」

@@ -19,9 +19,9 @@ namespace StoreApi.Dtos
             public string? Location { get; set; }
             
             [Required(ErrorMessage = "請上傳商品圖片")]
-            public string? ImagePath { get; set; }
+        public IFormFile? Image { get; set; }
 
-            [Required(ErrorMessage = "請設定下單截止日期")]
+        [Required(ErrorMessage = "請設定下單截止日期")]
 
 
             public DateTime? EndDate { get; set; }

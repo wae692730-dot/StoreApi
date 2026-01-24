@@ -15,6 +15,12 @@ public partial class Store
 
     public DateTime? UpdatedAt { get; set; }
 
+    public DateTime? SubmittedAt { get; set; }
+
+    public DateTime? RecoverAt { get; set; }
+
+    public virtual ICollection<BuyerOrder> BuyerOrders { get; set; } = new List<BuyerOrder>();
+
     public virtual ICollection<StoreProduct> StoreProducts { get; set; } = new List<StoreProduct>();
 
     public virtual ICollection<StoreReview> StoreReviews { get; set; } = new List<StoreReview>();

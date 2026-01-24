@@ -2,27 +2,30 @@
 using Microsoft.EntityFrameworkCore;
 using StoreApi.Models;
 using StoreApi.Dtos;
+using StoreApi.Services;
+
 
 namespace StoreApi.Controllers;
 
 [ApiController]
-[Route("api/store/{storeId}/products")]
+[Route("api/store/{storeId}/createproducts")]
+[Tags("2 CreateStoreProductApi")]
+
 public class CreateStoreProductApiController : ControllerBase
 {
     private readonly StoreDbContext _db;
+    private readonly ImageUploadService _imageService;
 
-    public CreateStoreProductApiController(StoreDbContext db)
+
+
+    public CreateStoreProductApiController(StoreDbContext db, ImageUploadService imageService)
     {
         _db = db;
+        _imageService = imageService;
     }
-
-    // =========================================================
-    // 1️⃣ 新增商品
-    // =========================================================
-    [HttpPost]
-    public async Task<IActionResult> CreateProduct(
-        int storeId,
-        [FromBody] CreateStoreProductDto dto)
+  
+    [HttpPost] //  建立第一波商品（商品隨賣場一起進審核）
+    public async Task<IActionResult> CreateProduct(int storeId,[FromForm] CreateStoreProductDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
@@ -33,9 +36,21 @@ public class CreateStoreProductApiController : ControllerBase
         if (store == null)
             return NotFound("賣場不存在");
 
-        // 移除賣場審核狀態檢查
-        // if (store.Status == 2)
-        //     return BadRequest("審核失敗的賣場不可新增商品");
+        if (store.Status == 4)
+        {
+            return BadRequest("賣場停權中，暫時無法操作商品");
+        }
+
+        // 只有草稿可新增商品
+        if (store.Status != 0)
+        {
+            return BadRequest(new
+            {
+                message = "賣場已送審或已發布，禁止再新增商品"
+            });
+        }
+
+        var imagePath = await _imageService.SaveProductImageAsync(dto.Image);
 
         var product = new StoreProduct
         {
@@ -45,39 +60,37 @@ public class CreateStoreProductApiController : ControllerBase
             Price = dto.Price,
             Quantity = dto.Quantity,
             Location = dto.Location,
-            ImagePath = dto.ImagePath,
             EndDate = dto.EndDate,
-            CreatedAt = DateTime.Now,
-            Status = 1
+
+            // ⭐ 圖片重點
+            ImagePath = imagePath,
+
+            Status = 0,
+            CreatedAt = DateTime.Now
         };
 
         _db.StoreProducts.Add(product);
-
-
         await _db.SaveChangesAsync();
-
         return Ok(new
         {
             product.ProductId,
-            Message = "商品建立成功"
+            product.ImagePath,
+            Message = "商品已建立，隨賣場進入審核"
         });
     }
 
-    // 更新商品
-    [HttpPut("{productId}")]
-    public async Task<IActionResult> UpdateProduct(
-        int storeId,
-        int productId,
-        [FromBody] StoreProductDto dto)
+    [HttpPut("{productId}/edit")]   // 修改審核中的商品資訊
+    public async Task<IActionResult> EditProduct(int storeId,int productId,[FromForm] EditProductDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var store = await _db.Stores
-            .FirstOrDefaultAsync(s => s.StoreId == storeId);
-
+        var store = await _db.Stores.FindAsync(storeId);
         if (store == null)
             return NotFound("賣場不存在");
+
+        if (store.Status == 4)
+            return BadRequest("賣場停權中，無法修改商品");
 
         var product = await _db.StoreProducts
             .FirstOrDefaultAsync(p => p.ProductId == productId
@@ -86,47 +99,51 @@ public class CreateStoreProductApiController : ControllerBase
         if (product == null)
             return NotFound("商品不存在");
 
-        // ① 更新商品
+        if (product.Status == 3)
+            return BadRequest("商品已發布，請使用商品修改 API");
+
         product.ProductName = dto.ProductName;
-        product.Description = dto.Description;
         product.Price = dto.Price;
         product.Quantity = dto.Quantity;
-        product.Location = dto.Location;
-        product.ImagePath = dto.ImagePath;
+        product.Description = dto.Description;
         product.EndDate = dto.EndDate;
-        product.UpdatedAt = DateTime.Now;
+        product.Location = dto.Location;
 
-        // ② 更新商品 → 重置為審核中
-        if (product.Status == 3 || product.Status == 2)
+        if (dto.Image != null)
         {
-            product.Status = 1;
-        }
+            var newImagePath = await _imageService.SaveProductImageAsync(dto.Image);
 
-        // ③ 一次性儲存
+            if (!string.IsNullOrEmpty(newImagePath))
+            {
+                _imageService.DeleteImage(product.ImagePath);
+                product.ImagePath = newImagePath;
+            }
+        }
+            product.Status = 1; // 待審核
+            product.IsActive = false; // 資料庫顯示0 前端不會看到
+            product.UpdatedAt = DateTime.Now;
         await _db.SaveChangesAsync();
 
         return Ok(new
         {
             product.ProductId,
-            ProductStatus = product.Status,
-            Message = "商品更新成功，已進入審核流程"
+            product.Status,
+            message = "商品已更新，重新進入審核流程"
         });
     }
 
-
-    // =========================================================
-    // 3️⃣ 刪除商品
-    // =========================================================
-    [HttpDelete("{productId}")]
-    public async Task<IActionResult> DeleteProduct(
+ 
+    [HttpDelete("{productId}/withdraw")]   //  移除待審核中的商品，可繼續新增商品並重新送審
+    public async Task<IActionResult> Withdraw(
         int storeId,
         int productId)
     {
-        var store = await _db.Stores
-            .FirstOrDefaultAsync(s => s.StoreId == storeId);
-
+        var store = await _db.Stores.FindAsync(storeId);
         if (store == null)
             return NotFound("賣場不存在");
+
+        if (store.Status == 4)
+            return BadRequest("賣場已停權，無法操作商品");
 
         var product = await _db.StoreProducts
             .FirstOrDefaultAsync(p => p.ProductId == productId
@@ -135,17 +152,22 @@ public class CreateStoreProductApiController : ControllerBase
         if (product == null)
             return NotFound("商品不存在");
 
-        // if (store.Status == 2)
-        //     return BadRequest("審核失敗的賣場不可刪除商品");
+        // 僅限草稿 / 審核中
+        if (product.Status != 0 && product.Status != 1)
+            return BadRequest("此商品狀態不可撤回");
 
-        _db.StoreProducts.Remove(product);
 
-        // 已發布 → 刪除後退回審核 (移除此邏輯，刪除商品不影響賣場狀態)
-        // if (store.Status == 3)
-        //     store.Status = 1;
+        // 刪除僅限草稿跟審核中
+        product.Status = 5; // 撤回狀態
+        product.IsActive = false;
+        product.UpdatedAt = DateTime.Now;
 
         await _db.SaveChangesAsync();
 
-        return NoContent();
+    
+        return Ok(new
+        {
+            message = "商品已移除，可繼續新增商品並重新送審"
+        });
     }
 }

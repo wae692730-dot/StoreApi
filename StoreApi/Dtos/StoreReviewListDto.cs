@@ -3,11 +3,14 @@
     public class StoreReviewListDto
     {
         public int StoreId { get; set; }
-        public string StoreName { get; set; } = null!;
+        public string SellerId { get; set; }
+        public string StoreName { get; set; }
+        public int Status { get; set; }
+        public int ReviewFailCount { get; set; }
         public DateTime CreatedAt { get; set; }
 
-        // 底下的商品
-        public List<StoreReviewProductDto> Products { get; set; } = new();
+        public List<StoreReviewProductDto> StoreProducts{ get; set; }
     }
+
 
 }

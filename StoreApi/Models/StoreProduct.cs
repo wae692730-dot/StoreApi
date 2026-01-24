@@ -27,9 +27,19 @@ public partial class StoreProduct
 
     public DateTime? UpdatedAt { get; set; }
 
-    public byte Status { get; set; }
+    public bool IsActive { get; set; }
 
-    public int ReviewFailCount { get; set; }
+    public int ReportCount { get; set; }
+
+    public DateTime? LastReportedAt { get; set; }
+
+    public int Status { get; set; }
+
+    public string? RejectReason { get; set; }
+
+    public virtual ICollection<BuyerOrderDetail> BuyerOrderDetails { get; set; } = new List<BuyerOrderDetail>();
 
     public virtual Store Store { get; set; } = null!;
+
+    public virtual ICollection<StoreProductReview> StoreProductReviews { get; set; } = new List<StoreProductReview>();
 }

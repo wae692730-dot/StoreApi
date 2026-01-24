@@ -13,24 +13,22 @@ public class BuyerOrderApiController : ControllerBase
     {
         _db = db;
     }
-
-
-    // 建立買家訂單
-    [HttpPost]
+  
+    [HttpPost] // 建立買家訂單
     public async Task<IActionResult> CreateBuyerOrder(
         [FromBody] CreateBuyerOrderDto dto)
     {
         if (dto.Items == null || !dto.Items.Any())
             return BadRequest("訂單必須包含至少一項商品");
 
-        // 1️⃣ 驗證賣場
+        // 驗證賣場
         var store = await _db.Stores
             .FirstOrDefaultAsync(s => s.StoreId == dto.StoreId && s.Status == 3);
 
         if (store == null)
             return BadRequest("賣場不存在或尚未發布");
 
-        // 2️⃣ 驗證商品 + 計算金額
+        // 驗證商品 + 計算金額
         decimal totalAmount = 0;
         var orderItems = new List<BuyerOrderDetail>();
 
@@ -64,7 +62,7 @@ public class BuyerOrderApiController : ControllerBase
             product.Quantity -= item.Quantity;
         }
 
-        // 3️⃣ 建立訂單主檔
+        // 建立訂單主檔
         var order = new BuyerOrder
         {
             BuyerUid = dto.BuyerUid, // 之後可改成從 JWT 取
@@ -82,7 +80,7 @@ public class BuyerOrderApiController : ControllerBase
         _db.BuyerOrders.Add(order);
         await _db.SaveChangesAsync(); // 先拿到 buyer_order_id
 
-        // 4️⃣ 建立訂單明細
+        // 建立訂單明細
         foreach (var item in orderItems)
         {
             item.BuyerOrderId = order.BuyerOrderId;

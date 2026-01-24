@@ -9,6 +9,7 @@ namespace StoreApi.Controllers;
 
 [ApiController]
 [Route("api/store/{storeId}/createproducts")]
+[Tags("2 CreateStoreProductApi")]
 
 public class CreateStoreProductApiController : ControllerBase
 {
@@ -23,7 +24,7 @@ public class CreateStoreProductApiController : ControllerBase
         _imageService = imageService;
     }
   
-    [HttpPost]//  建立第一波商品（商品隨賣場一起進審核）
+    [HttpPost] //  建立第一波商品（商品隨賣場一起進審核）
     public async Task<IActionResult> CreateProduct(int storeId,[FromForm] CreateStoreProductDto dto)
     {
         if (!ModelState.IsValid)
@@ -35,7 +36,10 @@ public class CreateStoreProductApiController : ControllerBase
         if (store == null)
             return NotFound("賣場不存在");
 
-
+        if (store.Status == 4)
+        {
+            return BadRequest("賣場停權中，暫時無法操作商品");
+        }
 
         // 只有草稿可新增商品
         if (store.Status != 0)
@@ -61,7 +65,7 @@ public class CreateStoreProductApiController : ControllerBase
             // ⭐ 圖片重點
             ImagePath = imagePath,
 
-            Status = 1,
+            Status = 0,
             CreatedAt = DateTime.Now
         };
 
@@ -81,6 +85,13 @@ public class CreateStoreProductApiController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
+        var store = await _db.Stores.FindAsync(storeId);
+        if (store == null)
+            return NotFound("賣場不存在");
+
+        if (store.Status == 4)
+            return BadRequest("賣場停權中，無法修改商品");
+
         var product = await _db.StoreProducts
             .FirstOrDefaultAsync(p => p.ProductId == productId
                                    && p.StoreId == storeId);
@@ -91,20 +102,12 @@ public class CreateStoreProductApiController : ControllerBase
         if (product.Status == 3)
             return BadRequest("商品已發布，請使用商品修改 API");
 
-     
-        if (product.ProductName != dto.ProductName)
-        {
-            product.ProductName = dto.ProductName;
-           
-        }
-
         product.ProductName = dto.ProductName;
         product.Price = dto.Price;
         product.Quantity = dto.Quantity;
         product.Description = dto.Description;
         product.EndDate = dto.EndDate;
         product.Location = dto.Location;
-
 
         if (dto.Image != null)
         {
@@ -129,9 +132,8 @@ public class CreateStoreProductApiController : ControllerBase
         });
     }
 
-
-    //  移除待審核中的商品，可繼續新增商品並重新送審
-    [HttpDelete("{productId}/withdraw")]
+ 
+    [HttpDelete("{productId}/withdraw")]   //  移除待審核中的商品，可繼續新增商品並重新送審
     public async Task<IActionResult> Withdraw(
         int storeId,
         int productId)

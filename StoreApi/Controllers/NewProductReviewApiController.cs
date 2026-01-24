@@ -7,6 +7,7 @@ namespace StoreApi.Controllers
 {
     [ApiController]
     [Route("api/review/products")]
+    [Tags("5 NewProductReviewApi")]
 
     public class NewProductReviewApiController : ControllerBase
     {
@@ -16,9 +17,7 @@ namespace StoreApi.Controllers
         {
             _db = db;
         }
-
-
-       
+   
         [HttpGet("newpending")]  //  取得「第二波待審核商品清單」
         public async Task<IActionResult> GetPendingNewProducts()
         {
@@ -47,9 +46,8 @@ namespace StoreApi.Controllers
             return Ok(products);
         }
 
-    
-        // 審核通過 -> 商品發布   
-        [HttpPost("{productId}/approveproduct")]
+     
+        [HttpPost("{productId}/approveproduct")] // 審核通過 -> 商品發布  
         public async Task<IActionResult> ApproveProduct(int productId,[FromBody] ReviewDto dto)
 
         {
@@ -92,8 +90,7 @@ namespace StoreApi.Controllers
         }
 
 
-        // 審核不通過 商品退回
-        [HttpPost("{productId}/rejectproduct")]
+        [HttpPost("{productId}/rejectproduct")] // 審核不通過 商品退回
         public async Task<IActionResult> RejectProduct(int productId,[FromBody] ReviewDto dto)
         {
             var product = await _db.StoreProducts

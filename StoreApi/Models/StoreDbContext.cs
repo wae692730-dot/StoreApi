@@ -161,7 +161,6 @@ public partial class StoreDbContext : DbContext
                 .HasColumnName("product_name");
             entity.Property(e => e.Quantity).HasColumnName("quantity");
             entity.Property(e => e.RejectReason).HasMaxLength(500);
-            entity.Property(e => e.Status).HasDefaultValue("0");
             entity.Property(e => e.StoreId).HasColumnName("store_id");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("datetime")

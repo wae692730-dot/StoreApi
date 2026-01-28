@@ -11,6 +11,11 @@ public partial class Store
 
     public string StoreName { get; set; } = null!;
 
+    //測試
+    public byte Status { get; set; }
+
+    public int ReviewFailCount { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

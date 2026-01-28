@@ -15,13 +15,11 @@ public class BuyerOrderApiController : ControllerBase
     }
   
     [HttpPost] // 建立買家訂單
-    public async Task<IActionResult> CreateBuyerOrder(
-        [FromBody] CreateBuyerOrderDto dto)
+    public async Task<IActionResult> CreateBuyerOrder([FromBody] CreateBuyerOrderDto dto)
     {
         if (dto.Items == null || !dto.Items.Any())
             return BadRequest("訂單必須包含至少一項商品");
 
-        // 驗證賣場
         var store = await _db.Stores
             .FirstOrDefaultAsync(s => s.StoreId == dto.StoreId && s.Status == 3);
 
@@ -41,10 +39,10 @@ public class BuyerOrderApiController : ControllerBase
                     p.Status == 3);
 
             if (product == null)
-                return BadRequest($"商品 {item.StoreProductId} 不存在或不可販售");
+                return BadRequest($"商品不存在或不可販售");
 
             if (product.Quantity < item.Quantity)
-                return BadRequest($"商品 {product.ProductName} 庫存不足");
+                return BadRequest($"商品庫存不足");
 
             var subtotal = product.Price * item.Quantity;
             totalAmount += subtotal;
@@ -73,7 +71,7 @@ public class BuyerOrderApiController : ControllerBase
             ReceiverPhone = dto.ReceiverPhone,
             ShippingAddress = dto.ShippingAddress,
 
-            Status = 1, // 已成立（準備中）
+            Status = 0, // 已成立 但未付款
             CreatedAt = DateTime.Now
         };
 
@@ -96,4 +94,82 @@ public class BuyerOrderApiController : ControllerBase
             totalAmount = order.TotalAmount
         });
     }
+
+    [HttpGet("{orderId}/getbuyerorder")] //查詢單筆訂單（含明細）
+    public async Task<IActionResult> GetBuyerOrder(int orderId)
+    {
+        var order = await _db.BuyerOrders
+            .FirstOrDefaultAsync(o => o.BuyerOrderId == orderId);
+
+        if (order == null)
+            return NotFound("訂單不存在");
+
+        var items = await _db.BuyerOrderDetails
+            .Where(d => d.BuyerOrderId == orderId)
+            .Select(d => new BuyerOrderDetailDto
+            {
+                ProductName = d.ProductName,
+                UnitPrice = d.UnitPrice,
+                Quantity = d.Quantity,
+                SubtotalAmount = d.SubtotalAmount
+            })
+            .ToListAsync();
+
+        var result = new BuyerOrderResponseDto
+        {
+            BuyerOrderId = order.BuyerOrderId,
+            BuyerUid = order.BuyerUid,
+            StoreId = order.StoreId,
+            TotalAmount = order.TotalAmount,
+            Status = order.Status,
+            CreatedAt = order.CreatedAt,
+            Items = items
+        };
+
+        return Ok(result);
+    }
+
+    [HttpPut("{orderId}/updatestatus")]    // 更新訂單狀態（給錢包 / 系統用）
+    public async Task<IActionResult> UpdateOrderStatus(int orderId,[FromBody] UpdateOrderStatusDto dto)
+    {
+        var order = await _db.BuyerOrders
+            .FirstOrDefaultAsync(o => o.BuyerOrderId == orderId);
+
+        if (order == null)
+            return NotFound("訂單不存在");
+
+        // 0: 已建立(未付款)
+        // 1: 已付款
+        // 2: 已取消
+        // 3: 已完成
+
+        if (dto.Status < 0 || dto.Status > 3)
+            return BadRequest("不合法的訂單狀態");
+
+        // 已取消 / 已完成 不可再變更
+        if (order.Status == 2 || order.Status == 3)
+            return BadRequest("訂單已結束，無法再變更狀態");
+
+        order.Status = dto.Status;
+
+        if (dto.Status == 2) // 取消
+        {
+            // 若你有 CancelledAt 可在此填
+        }
+        else if (dto.Status == 3) // 完成
+        {
+            order.CompletedAt = DateTime.Now;
+        }
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "訂單狀態已更新",
+            orderId = order.BuyerOrderId,
+            status = order.Status
+        });
+    }
+
+
 }

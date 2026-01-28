@@ -1,0 +1,130 @@
+USE [StoreDb]
+GO
+
+CREATE TABLE [dbo].[Store](
+	[store_id] [int] IDENTITY(1,1) NOT NULL,
+	[seller_uid] [nvarchar](50) NOT NULL,
+	[store_name] [nvarchar](100) NOT NULL,
+	[status] [tinyint] NOT NULL,
+	[review_fail_count] [int] NOT NULL,
+	[created_at] [datetime] NOT NULL,
+	[updated_at] [datetime] NULL,
+	[SubmittedAt] [datetime] NULL,
+	[RecoverAt] [datetime] NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[store_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+
+--------------------------------------------------------------------------------
+
+USE [StoreDb]
+GO
+
+CREATE TABLE [dbo].[StoreProduct](
+	[product_id] [int] IDENTITY(1,1) NOT NULL,
+	[store_id] [int] NOT NULL,
+	[product_name] [nvarchar](100) NOT NULL,
+	[description] [nvarchar](max) NULL,
+	[price] [decimal](10, 2) NOT NULL,
+	[quantity] [int] NOT NULL,
+	[location] [nvarchar](100) NULL,
+	[image_path] [nvarchar](255) NULL,
+	[end_date] [datetime] NULL,
+	[created_at] [datetime] NOT NULL,
+	[updated_at] [datetime] NULL,
+	[IsActive] [bit] NOT NULL,
+	[ReportCount] [int] NOT NULL,
+	[LastReportedAt] [datetime] NULL,
+	[Status] [int] NOT NULL,
+	[RejectReason] [nvarchar](500) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[product_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[StoreProduct] ADD  DEFAULT (getdate()) FOR [created_at]
+GO
+
+ALTER TABLE [dbo].[StoreProduct] ADD  DEFAULT ((1)) FOR [IsActive]
+GO
+
+ALTER TABLE [dbo].[StoreProduct] ADD  DEFAULT ((0)) FOR [ReportCount]
+GO
+
+ALTER TABLE [dbo].[StoreProduct] ADD  CONSTRAINT [DF_StoreProduct_Status]  DEFAULT ((0)) FOR [Status]
+GO
+
+ALTER TABLE [dbo].[StoreProduct]  WITH CHECK ADD  CONSTRAINT [FK_StoreProduct_Store] FOREIGN KEY([store_id])
+REFERENCES [dbo].[Store] ([store_id])
+GO
+
+ALTER TABLE [dbo].[StoreProduct] CHECK CONSTRAINT [FK_StoreProduct_Store]
+GO
+
+
+-----------------------------------------------------------------------------------
+
+USE [StoreDb]
+GO
+
+CREATE TABLE [dbo].[StoreProductReview](
+	[product_review_id] [int] IDENTITY(1,1) NOT NULL,
+	[product_id] [int] NOT NULL,
+	[reviewer_uid] [nvarchar](50) NOT NULL,
+	[result] [tinyint] NOT NULL,
+	[comment] [nvarchar](500) NULL,
+	[created_at] [datetime] NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[product_review_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[StoreProductReview] ADD  DEFAULT (getdate()) FOR [created_at]
+GO
+
+ALTER TABLE [dbo].[StoreProductReview]  WITH CHECK ADD  CONSTRAINT [FK_ProductReview_Product] FOREIGN KEY([product_id])
+REFERENCES [dbo].[StoreProduct] ([product_id])
+GO
+
+ALTER TABLE [dbo].[StoreProductReview] CHECK CONSTRAINT [FK_ProductReview_Product]
+GO
+
+
+------------------------------------------------------------------------------------
+
+USE [StoreDb]
+GO
+
+CREATE TABLE [dbo].[StoreReview](
+	[review_id] [int] IDENTITY(1,1) NOT NULL,
+	[store_id] [int] NOT NULL,
+	[reviewer_uid] [nvarchar](50) NOT NULL,
+	[result] [tinyint] NOT NULL,
+	[comment] [nvarchar](255) NULL,
+	[created_at] [datetime] NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[review_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[StoreReview] ADD  DEFAULT (getdate()) FOR [created_at]
+GO
+
+ALTER TABLE [dbo].[StoreReview]  WITH CHECK ADD  CONSTRAINT [FK_StoreReview_Store] FOREIGN KEY([store_id])
+REFERENCES [dbo].[Store] ([store_id])
+GO
+
+ALTER TABLE [dbo].[StoreReview] CHECK CONSTRAINT [FK_StoreReview_Store]
+GO
+
+

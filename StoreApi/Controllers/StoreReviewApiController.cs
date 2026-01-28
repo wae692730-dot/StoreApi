@@ -74,9 +74,9 @@ public class StoreReviewApiController : ControllerBase
         // 寫入審核紀錄
         _db.StoreReviews.Add(new StoreReview
         {
-            StoreId = storeId,
+            ProductId = productId,     // 記錄商品ID
             ReviewerUid = dto.ReviewerUid,
-            Result = 1,
+            Result = 1,                // 1 = 通過 (假設 enum/convention)
             CreatedAt = DateTime.Now
         });
 
@@ -123,9 +123,9 @@ public class StoreReviewApiController : ControllerBase
 
         _db.StoreReviews.Add(new StoreReview
         {
-            StoreId = storeId,
+            ProductId = productId,
             ReviewerUid = dto.ReviewerUid,
-            Result = 2,
+            Result = 2,                   // 2 = 不通過
             Comment = dto.Comment,
             CreatedAt = DateTime.Now
         });

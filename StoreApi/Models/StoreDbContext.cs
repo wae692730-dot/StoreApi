@@ -120,7 +120,6 @@ public partial class StoreDbContext : DbContext
             entity.Property(e => e.SellerUid)
                 .HasMaxLength(50)
                 .HasColumnName("seller_uid");
-            entity.Property(e => e.Status).HasColumnName("status");
             entity.Property(e => e.StoreName)
                 .HasMaxLength(100)
                 .HasColumnName("store_name");
@@ -212,14 +211,14 @@ public partial class StoreDbContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime")
                 .HasColumnName("created_at");
+            entity.Property(e => e.ProductId).HasColumnName("product_id");
             entity.Property(e => e.Result).HasColumnName("result");
             entity.Property(e => e.ReviewerUid)
                 .HasMaxLength(50)
                 .HasColumnName("reviewer_uid");
-            entity.Property(e => e.StoreId).HasColumnName("store_id");
 
-            entity.HasOne(d => d.Store).WithMany(p => p.StoreReviews)
-                .HasForeignKey(d => d.StoreId)
+            entity.HasOne(d => d.Product).WithMany(p => p.StoreReviews)
+                .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StoreReview_Store");
         });

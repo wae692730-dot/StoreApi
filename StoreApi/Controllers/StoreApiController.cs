@@ -46,7 +46,6 @@ public class StoreApiController : ControllerBase
         return Ok(new
         {
             store.StoreId,
-            store.Status
         });
     }
 

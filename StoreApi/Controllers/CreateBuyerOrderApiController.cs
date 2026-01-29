@@ -20,79 +20,120 @@ public class BuyerOrderApiController : ControllerBase
         if (dto.Items == null || !dto.Items.Any())
             return BadRequest("訂單必須包含至少一項商品");
 
-        var store = await _db.Stores
-            .FirstOrDefaultAsync(s => s.StoreId == dto.StoreId && s.Status == 3);
+        // 使用交易，確保「扣庫存 + 扣錢 + 建訂單」要嘛全成功，要嘛全失敗
+        using var transaction = await _db.Database.BeginTransactionAsync();
 
-        if (store == null)
-            return BadRequest("賣場不存在或尚未發布");
-
-        // 驗證商品 + 計算金額
-        decimal totalAmount = 0;
-        var orderItems = new List<BuyerOrderDetail>();
-
-        foreach (var item in dto.Items)
+        try
         {
-            var product = await _db.StoreProducts
-                .FirstOrDefaultAsync(p =>
-                    p.ProductId == item.StoreProductId &&
-                    p.StoreId == dto.StoreId &&
-                    p.Status == 3);
+            // 驗證賣場（必須已發布）
+            var store = await _db.Stores
+                .FirstOrDefaultAsync(s => s.StoreId == dto.StoreId && s.Status == 3);
 
-            if (product == null)
-                return BadRequest($"商品不存在或不可販售");
+            if (store == null)
+                return BadRequest("賣場不存在或尚未發布");
 
-            if (product.Quantity < item.Quantity)
-                return BadRequest($"商品庫存不足");
+            // 合併相同商品（避免同商品重複出現在 Items）
+            var groupedItems = dto.Items
+                .GroupBy(i => i.StoreProductId)
+                .Select(g => new
+                {
+                    StoreProductId = g.Key,
+                    Quantity = g.Sum(x => x.Quantity)
+                })
+                .ToList();
 
-            var subtotal = product.Price * item.Quantity;
-            totalAmount += subtotal;
+            decimal totalAmount = 0;
 
-            orderItems.Add(new BuyerOrderDetail
+            var orderItems = new List<BuyerOrderDetail>();
+
+            // 驗證商品 + 庫存 + 計算金額
+            foreach (var item in groupedItems)
             {
-                StoreProductId = product.ProductId,
-                ProductName = product.ProductName,
-                UnitPrice = product.Price,
-                Quantity = item.Quantity,
-                SubtotalAmount = subtotal
+                var product = await _db.StoreProducts
+                    .FirstOrDefaultAsync(p =>
+                        p.ProductId == item.StoreProductId &&
+                        p.StoreId == dto.StoreId &&
+                        p.Status == 3 &&
+                        p.Quantity > 0);
+
+                if (product == null)
+                    return BadRequest("商品不存在或不可販售");
+
+                if (product.Quantity < item.Quantity)
+                    return BadRequest($"商品「{product.ProductName}」庫存不足");
+
+                var subtotal = product.Price * item.Quantity;
+                totalAmount += subtotal;
+
+                orderItems.Add(new BuyerOrderDetail
+                {
+                    StoreProductId = product.ProductId,
+                    ProductName = product.ProductName,
+                    UnitPrice = product.Price,
+                    Quantity = item.Quantity,
+                    SubtotalAmount = subtotal
+                });
+
+                // 預扣庫存（交易內，尚未 commit）
+                product.Quantity -= item.Quantity;
+            }
+
+            // 驗證買家
+            var buyer = await _db.Users
+                .FirstOrDefaultAsync(u => u.Uid == dto.BuyerUid);
+
+            if (buyer == null)
+                return BadRequest("買家不存在");
+
+            if (buyer.Balance < totalAmount)
+                return BadRequest("餘額不足");
+
+            // 預扣餘額
+            buyer.Balance -= totalAmount;
+
+            // 建立訂單主檔
+            var order = new BuyerOrder
+            {
+                BuyerUid = dto.BuyerUid, // Demo 版，之後改 JWT
+                StoreId = dto.StoreId,
+                TotalAmount = totalAmount,
+
+                ReceiverName = dto.ReceiverName,
+                ReceiverPhone = dto.ReceiverPhone,
+                ShippingAddress = dto.ShippingAddress,
+
+                Status = 1, // 已成立 / 已付款
+                CreatedAt = DateTime.Now
+            };
+
+            _db.BuyerOrders.Add(order);
+            await _db.SaveChangesAsync(); // 取得 BuyerOrderId
+
+            // 建立訂單明細
+            foreach (var item in orderItems)
+            {
+                item.BuyerOrderId = order.BuyerOrderId;
+                _db.BuyerOrderDetails.Add(item);
+            }
+
+            await _db.SaveChangesAsync();
+
+            // 全部成功 -> 提交交易
+            await transaction.CommitAsync();
+
+            return Ok(new
+            {
+                message = "訂單建立成功",
+                orderId = order.BuyerOrderId,
+                totalAmount = order.TotalAmount
             });
-
-            // 預扣庫存（稍後 SaveChanges）
-            product.Quantity -= item.Quantity;
         }
-
-        // 建立訂單主檔
-        var order = new BuyerOrder
+        catch (Exception ex)
         {
-            BuyerUid = dto.BuyerUid, // 之後可改成從 JWT 取
-            StoreId = dto.StoreId,
-            TotalAmount = totalAmount,
-
-            ReceiverName = dto.ReceiverName,
-            ReceiverPhone = dto.ReceiverPhone,
-            ShippingAddress = dto.ShippingAddress,
-
-            Status = 0, // 已成立 但未付款
-            CreatedAt = DateTime.Now
-        };
-
-        _db.BuyerOrders.Add(order);
-        await _db.SaveChangesAsync(); // 先拿到 buyer_order_id
-
-        // 建立訂單明細
-        foreach (var item in orderItems)
-        {
-            item.BuyerOrderId = order.BuyerOrderId;
-            _db.BuyerOrderDetails.Add(item);
+            // 任一步失敗 -> 回滾
+            await transaction.RollbackAsync();
+            return StatusCode(500, $"建立訂單失敗：{ex.Message}");
         }
-
-        await _db.SaveChangesAsync();
-
-        return Ok(new
-        {
-            message = "訂單建立成功",
-            orderId = order.BuyerOrderId,
-            totalAmount = order.TotalAmount
-        });
     }
 
     [HttpGet("{orderId}/getbuyerorder")] //查詢單筆訂單（含明細）

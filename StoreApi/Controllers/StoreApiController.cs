@@ -71,7 +71,7 @@ public class StoreApiController : ControllerBase
           s.StoreName,
 
           Products = s.StoreProducts
-              .Where(p => p.Status == 3 && p.IsActive)
+              .Where(p => p.Status == 3)
               .Select(p => new
               {
                   p.ProductId,

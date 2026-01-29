@@ -1,0 +1,68 @@
+賣場 /  商品狀態
+
+Store.Status = 0 → 草稿/尚未送審   (賣家
+尚未送審，可自由編輯  
+Product.Status = 0
+IsActive   false(0)
+
+Store.Status = 1 → 審核中          (系統
+已送審，等待審核
+Product.Status = 1
+IsActive   false(0)
+
+Store.Status = 3 → 已發布    	  (審核員
+審核通過，可販售
+Product.Status = 3
+IsActive  true(1)
+
+Store.Status = 2 → 發布失敗      (審核員
+被退回，需修改後再送審
+Product.Status = 2
+IsActive  false(0)
+
+Store.Status = 4 → 停權7天            (平台
+平台強制停用
+
+
+Product.Status = 4
+IsActive  false(0)
+
+賣家主動撤回送審商品
+Product.Status = 5
+IsActive  false(0)
+
+Review.Result = 1 單筆當下的審核通過
+Review.Result = 2 單筆當下的審核不通過
+
+
+新增商品的狀態
+IsActive = true(1) → 可以顯示前端
+IsActive = false(0) → 不能顯示前湍
+
+
+----------------------------------------------------------------------
+買家狀態
+
+BuyerOrder.Status = 0 建立訂單，尚未付款
+
+BuyerOrder.Status = 1 已付款
+
+BuyerOrder.Status = 2 訂單取消/付款失敗
+
+BuyerOrder.Status = 3 訂單完成
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

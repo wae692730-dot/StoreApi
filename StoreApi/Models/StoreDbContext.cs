@@ -27,6 +27,8 @@ public partial class StoreDbContext : DbContext
 
     public virtual DbSet<StoreReview> StoreReviews { get; set; }
 
+    public virtual DbSet<User> Users { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer("Server=.\\sqlexpress;Database=StoreDb;Integrated Security=True;Encrypt=False;");
@@ -120,6 +122,7 @@ public partial class StoreDbContext : DbContext
             entity.Property(e => e.SellerUid)
                 .HasMaxLength(50)
                 .HasColumnName("seller_uid");
+            entity.Property(e => e.Status).HasColumnName("status");
             entity.Property(e => e.StoreName)
                 .HasMaxLength(100)
                 .HasColumnName("store_name");
@@ -211,16 +214,56 @@ public partial class StoreDbContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime")
                 .HasColumnName("created_at");
-            entity.Property(e => e.ProductId).HasColumnName("product_id");
             entity.Property(e => e.Result).HasColumnName("result");
             entity.Property(e => e.ReviewerUid)
                 .HasMaxLength(50)
                 .HasColumnName("reviewer_uid");
+            entity.Property(e => e.StoreId).HasColumnName("store_id");
 
-            entity.HasOne(d => d.Product).WithMany(p => p.StoreReviews)
-                .HasForeignKey(d => d.ProductId)
+            entity.HasOne(d => d.Store).WithMany(p => p.StoreReviews)
+                .HasForeignKey(d => d.StoreId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StoreReview_Store");
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(e => e.Uid).HasName("PK__Users__DD7012640157227D");
+
+            entity.HasIndex(e => e.Email, "UQ__Users__AB6E616422BA221B").IsUnique();
+
+            entity.Property(e => e.Uid)
+                .HasMaxLength(50)
+                .HasColumnName("uid");
+            entity.Property(e => e.Address).HasColumnName("address");
+            entity.Property(e => e.Avatar).HasColumnName("avatar");
+            entity.Property(e => e.Balance)
+                .HasDefaultValue(0.00m)
+                .HasColumnType("decimal(15, 2)")
+                .HasColumnName("balance");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("created_at");
+            entity.Property(e => e.DisabledUntil)
+                .HasColumnType("datetime")
+                .HasColumnName("disabled_until");
+            entity.Property(e => e.Email)
+                .HasMaxLength(100)
+                .HasColumnName("email");
+            entity.Property(e => e.EscrowBalance)
+                .HasDefaultValue(0.00m)
+                .HasColumnType("decimal(15, 2)")
+                .HasColumnName("escrow_balance");
+            entity.Property(e => e.Name)
+                .HasMaxLength(100)
+                .HasColumnName("name");
+            entity.Property(e => e.PasswordHash)
+                .HasMaxLength(255)
+                .HasColumnName("password_hash");
+            entity.Property(e => e.Phone)
+                .HasMaxLength(20)
+                .HasColumnName("phone");
         });
 
         OnModelCreatingPartial(modelBuilder);

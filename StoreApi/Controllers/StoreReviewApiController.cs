@@ -71,14 +71,6 @@ public class StoreReviewApiController : ControllerBase
             product.IsActive = true;  // 前端顯示
         }
 
-        // 寫入審核紀錄
-        _db.StoreReviews.Add(new StoreReview
-        {
-            ProductId = productId,     // 記錄商品ID
-            ReviewerUid = dto.ReviewerUid,
-            Result = 1,                // 1 = 通過 (假設 enum/convention)
-            CreatedAt = DateTime.Now
-        });
 
         await _db.SaveChangesAsync();
         return Ok(new { message = "賣場審核通過，第一波商品已同步上架" });
@@ -121,14 +113,6 @@ public class StoreReviewApiController : ControllerBase
             store.RecoverAt = null;
         }
 
-        _db.StoreReviews.Add(new StoreReview
-        {
-            ProductId = productId,
-            ReviewerUid = dto.ReviewerUid,
-            Result = 2,                   // 2 = 不通過
-            Comment = dto.Comment,
-            CreatedAt = DateTime.Now
-        });
 
         await _db.SaveChangesAsync();
         return Ok(new
